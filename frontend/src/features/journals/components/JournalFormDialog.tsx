@@ -5,6 +5,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
@@ -80,13 +81,19 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">
+              Name
+              <RequiredMark />
+            </Label>
             <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">
+              Type
+              <RequiredMark />
+            </Label>
             <Controller
               control={control}
               name="type"
@@ -109,7 +116,10 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="defaultAccountId">Default Account</Label>
+            <Label htmlFor="defaultAccountId">
+              Default Account
+              <RequiredMark />
+            </Label>
             <Controller
               control={control}
               name="defaultAccountId"
