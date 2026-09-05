@@ -56,8 +56,20 @@ api.interceptors.response.use(
       }
     }
 
-    const niceError = new Error(backendMessage ?? "Something went wrong. Please try again.");
+    const backendErrors = error.response?.data?.errors as Record<string, string> | undefined;
+
+    // For a validation failure the top-level message is just "Validation
+    // failed" - the useful part is in `errors` ({ field: reason }). Surface
+    // the first field reason as the error message so the UI shows something
+    // actionable instead of the generic envelope text.
+    const firstFieldReason =
+      backendErrors && typeof backendErrors === "object"
+        ? Object.values(backendErrors).find((reason) => typeof reason === "string" && reason.length > 0)
+        : undefined;
+
+    const niceError = new Error(firstFieldReason ?? backendMessage ?? "Something went wrong. Please try again.");
     (niceError as Error & { code?: string }).code = backendCode ?? "UNKNOWN_ERROR";
+    (niceError as Error & { errors?: Record<string, string> }).errors = backendErrors;
 
     return Promise.reject(niceError);
   }
