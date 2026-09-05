@@ -157,16 +157,13 @@ enum DocStatus {
 }
 
 enum PaymentType {
+  RECEIPT
   PAYMENT
-  REFUND
 }
 
 enum PaymentMethod {
-  BANK_TRANSFER
-  CHEQUE
   CASH
-  CARD
-  ONLINE
+  BANK
 }
 
 enum ContactType {

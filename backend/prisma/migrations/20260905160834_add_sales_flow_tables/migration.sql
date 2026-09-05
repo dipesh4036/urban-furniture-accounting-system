@@ -99,8 +99,8 @@ CREATE TABLE `customer_invoices` (
 -- CreateTable
 CREATE TABLE `payments` (
     `id` VARCHAR(191) NOT NULL,
-    `type` ENUM('PAYMENT', 'REFUND') NOT NULL,
-    `method` ENUM('BANK_TRANSFER', 'CHEQUE', 'CASH', 'CARD', 'ONLINE') NOT NULL,
+    `type` ENUM('RECEIPT', 'PAYMENT') NOT NULL,
+    `method` ENUM('CASH', 'BANK') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
     `date` DATETIME(3) NOT NULL,
     `vendorBillId` VARCHAR(191) NULL,
