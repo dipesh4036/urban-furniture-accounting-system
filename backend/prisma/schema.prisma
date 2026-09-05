@@ -56,3 +56,25 @@ model Account {
   @@index([type])
   @@map("accounts")
 }
+
+enum ProductType {
+  GOODS
+  SERVICE
+  COMBO
+}
+
+// Products/services Urban Furniture buys or sells (Office Chair, Wooden
+// Table, ...). See plan.md Module 5.
+model Product {
+  id         String      @id @default(cuid())
+  name       String
+  type       ProductType
+  salesPrice Decimal     @db.Decimal(10, 2)
+  costPrice  Decimal     @db.Decimal(10, 2)
+  category   String
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@map("products")
+}
