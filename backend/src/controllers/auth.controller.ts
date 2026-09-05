@@ -88,3 +88,18 @@ export const activateAccountController = asyncHandler(async (req: Request, res: 
     timestamp: new Date().toISOString(),
   });
 });
+
+export const contactLoginController = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  const result = await authService.contactLogin(email, password);
+
+  res.cookie("accessToken", result.accessToken, cookieOptions);
+  res.cookie("refreshToken", result.refreshToken, cookieOptions);
+
+  res.status(200).json({
+    success: true,
+    message: "Logged in successfully",
+    data: { contact: result.contact },
+    timestamp: new Date().toISOString(),
+  });
+});

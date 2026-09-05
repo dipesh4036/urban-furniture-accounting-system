@@ -5,10 +5,29 @@ import { AppError } from "../utils/AppError";
 import { sendActivationEmail } from "./email.service";
 import type { CreateContactInput, UpdateContactInput } from "../validators/contacts.validator";
 
-// Longer than the 1-hour password-reset token (auth.service.ts) because
-// this is an invite, not a security-sensitive reset - the Contact might
-// not check their email right away.
 const ACTIVATION_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Every Contact object handed back to a controller (and from there, the
+// client) goes through this select - it leaves out passwordHash,
+// activationToken/activationTokenExpiresAt, and resetToken/
+// resetTokenExpiresAt. Those are secrets that should only ever reach
+// someone through the actual email link, never in an API response. Same
+// principle auth.service.ts's SafeUser already follows for passwordHash.
+const safeContactSelect = {
+  id: true,
+  name: true,
+  type: true,
+  email: true,
+  mobile: true,
+  city: true,
+  state: true,
+  pincode: true,
+  profileImage: true,
+  isActivated: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 // Creates the Contact, then emails them an activation link so they can
 // set their own password later (see plan.md Module 6). If the email
@@ -22,6 +41,7 @@ export async function createContact(input: CreateContactInput) {
 
   const contact = await prisma.contact.create({
     data: { ...input, activationToken, activationTokenExpiresAt },
+    select: safeContactSelect,
   });
 
   const emailSent = await sendActivationEmail({
@@ -53,6 +73,7 @@ export async function listContacts(options: ListContactsOptions) {
   const [contacts, total] = await prisma.$transaction([
     prisma.contact.findMany({
       where,
+      select: safeContactSelect,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -72,7 +93,7 @@ export async function listContacts(options: ListContactsOptions) {
 }
 
 export async function getContactById(id: string) {
-  const contact = await prisma.contact.findUnique({ where: { id } });
+  const contact = await prisma.contact.findUnique({ where: { id }, select: safeContactSelect });
   if (!contact) {
     throw new AppError(404, "Contact not found", "CONTACT_NOT_FOUND");
   }
@@ -80,22 +101,22 @@ export async function getContactById(id: string) {
 }
 
 export async function updateContact(id: string, input: UpdateContactInput) {
-  const contact = await prisma.contact.findUnique({ where: { id } });
-  if (!contact) {
+  const exists = await prisma.contact.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) {
     throw new AppError(404, "Contact not found", "CONTACT_NOT_FOUND");
   }
 
-  return prisma.contact.update({ where: { id }, data: input });
+  return prisma.contact.update({ where: { id }, data: input, select: safeContactSelect });
 }
 
 // "Archiving" a Contact just flips isActive to false - same reasoning as
 // archiveAccount: past transactions may already reference this Contact,
 // so we never delete the row itself.
 export async function archiveContact(id: string) {
-  const contact = await prisma.contact.findUnique({ where: { id } });
-  if (!contact) {
+  const exists = await prisma.contact.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) {
     throw new AppError(404, "Contact not found", "CONTACT_NOT_FOUND");
   }
 
-  return prisma.contact.update({ where: { id }, data: { isActive: false } });
+  return prisma.contact.update({ where: { id }, data: { isActive: false }, select: safeContactSelect });
 }

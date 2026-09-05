@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { accountsRouter } from "./accounts.routes";
 import { authRouter } from "./auth.routes";
+import { contactsRouter } from "./contacts.routes";
 
 // This is where every feature's routes get mounted. More get added here
 // as each feature branch builds its routes, e.g.:
@@ -9,3 +10,4 @@ export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/accounts", accountsRouter);
+apiRouter.use("/contacts", contactsRouter);

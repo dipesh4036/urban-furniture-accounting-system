@@ -26,3 +26,10 @@ export const resetPasswordSchema = z.object({
   newPassword: passwordComplexity,
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// A Contact logs in with their email (not a Login Id, unlike staff).
+export const contactLoginSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+export type ContactLoginInput = z.infer<typeof contactLoginSchema>;
