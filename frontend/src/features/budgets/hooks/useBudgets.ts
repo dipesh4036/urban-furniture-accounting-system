@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createBudget, listBudgets, type CreateBudgetInput, type ListBudgetsParams } from "../services/budgets.service";
+import {
+  createBudget,
+  listBudgets,
+  updateBudget,
+  type CreateBudgetInput,
+  type ListBudgetsParams,
+  type UpdateBudgetInput,
+} from "../services/budgets.service";
 
 // Query key convention from frontend-nextjs SKILL.md:
 // lists -> [feature, "list", params].
@@ -17,6 +24,17 @@ export function useCreateBudget() {
 
   return useMutation({
     mutationFn: (input: CreateBudgetInput) => createBudget(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budgets", "list"] });
+    },
+  });
+}
+
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateBudgetInput }) => updateBudget(id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets", "list"] });
     },

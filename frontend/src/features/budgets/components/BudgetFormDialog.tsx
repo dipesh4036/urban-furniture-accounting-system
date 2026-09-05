@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticAccounts } from "@/features/analytic-accounts/hooks/useAnalyticAccounts";
 import { getFirstErrorField } from "@/lib/formErrors";
 import { useUsers } from "@/features/users/hooks/useUsers";
-import { useCreateBudget } from "../hooks/useBudgets";
+import { useCreateBudget, useUpdateBudget } from "../hooks/useBudgets";
 import { budgetFormSchema, type BudgetFormValues } from "../validators/budgets.validator";
 import type { Budget } from "../services/budgets.service";
 
@@ -48,6 +48,8 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
   const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
 
   const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
+  const isPending = createBudget.isPending || updateBudget.isPending;
 
   // Both fetch up to the backend's pagination cap (100) - Analytic
   // Accounts and staff Users are both expected to stay well under that,
@@ -90,7 +92,8 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
         await createBudget.mutateAsync(values);
         toast.success("Budget created");
       } else {
-        toast.info("Budget details saved");
+        await updateBudget.mutateAsync({ id: budget.id, input: values });
+        toast.success("Budget updated");
       }
       reset(emptyBudget);
       setOpen(false);
@@ -241,13 +244,13 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={createBudget.isPending}
+              disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createBudget.isPending}>
-              {createBudget.isPending && <Spinner className="mr-2 size-4" />}
-              {createBudget.isPending ? "Saving..." : "Create Budget"}
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Spinner className="mr-2 size-4" />}
+              {isPending ? "Saving..." : budget ? "Update Budget" : "Create Budget"}
             </Button>
           </DialogFooter>
         </form>

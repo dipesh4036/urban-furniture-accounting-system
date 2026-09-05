@@ -53,13 +53,19 @@ export interface CreateBudgetInput {
   responsiblePersonId: string;
 }
 
+export type UpdateBudgetInput = Partial<CreateBudgetInput>;
+
 // Calls GET /budgets (plan.md Module 11).
 export function listBudgets(params?: ListBudgetsParams): Promise<BudgetListResult> {
   return api.get("/budgets", { params });
 }
 
-// Calls POST /budgets. No update/archive endpoint exists yet (plan.md
-// Module 11 only lists create + list) - so this is create-only.
+// Calls POST /budgets.
 export function createBudget(input: CreateBudgetInput): Promise<{ budget: Budget }> {
   return api.post("/budgets", input);
+}
+
+// Calls PATCH /budgets/:id - partial update of an existing budget.
+export function updateBudget(id: string, input: UpdateBudgetInput): Promise<{ budget: Budget }> {
+  return api.patch(`/budgets/${id}`, input);
 }

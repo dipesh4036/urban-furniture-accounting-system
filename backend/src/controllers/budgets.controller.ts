@@ -13,6 +13,17 @@ export const createBudgetController = asyncHandler(async (req: Request, res: Res
   });
 });
 
+export const updateBudgetController = asyncHandler(async (req: Request, res: Response) => {
+  const budget = await budgetsService.updateBudget(req.params.id, req.body);
+
+  res.status(200).json({
+    success: true,
+    message: "Budget updated successfully",
+    data: { budget },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 export const listBudgetsController = asyncHandler(async (req: Request, res: Response) => {
   const { budgets, meta } = await budgetsService.listBudgets(req.query);
 
