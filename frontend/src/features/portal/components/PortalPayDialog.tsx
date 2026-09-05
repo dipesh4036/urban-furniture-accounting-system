@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePayCustomerInvoice } from "@/features/customer-invoices/hooks/useCustomerInvoices";
+import { getFirstErrorField } from "@/lib/formErrors";
 import {
   paymentFormSchema,
   paymentMethodLabels,
@@ -67,12 +68,16 @@ export function PortalPayDialog({
     formState: { errors },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       amount: balanceDue > 0 ? balanceDue : 0,
       method: "ONLINE",
       date: today,
     },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: PaymentFormValues) {
     try {
@@ -146,10 +151,10 @@ export function PortalPayDialog({
               step="0.01"
               min="0.01"
               max={balanceDue > 0 ? balanceDue : undefined}
-              aria-invalid={!!errors.amount}
+              aria-invalid={firstErrorField === "amount"}
               {...register("amount", { valueAsNumber: true })}
             />
-            {errors.amount && (
+            {firstErrorField === "amount" && errors.amount && (
               <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
           </div>
@@ -165,7 +170,7 @@ export function PortalPayDialog({
               name="method"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="method" className="w-full" aria-invalid={!!errors.method}>
+                  <SelectTrigger id="method" className="w-full" aria-invalid={firstErrorField === "method"}>
                     <SelectValue placeholder="Select method">
                       {(selected: string) =>
                         paymentMethodLabels[selected as keyof typeof paymentMethodLabels] ??
@@ -183,7 +188,7 @@ export function PortalPayDialog({
                 </Select>
               )}
             />
-            {errors.method && (
+            {firstErrorField === "method" && errors.method && (
               <p className="text-xs text-destructive">{errors.method.message}</p>
             )}
           </div>
@@ -197,10 +202,10 @@ export function PortalPayDialog({
             <Input
               id="date"
               type="date"
-              aria-invalid={!!errors.date}
+              aria-invalid={firstErrorField === "date"}
               {...register("date")}
             />
-            {errors.date && (
+            {firstErrorField === "date" && errors.date && (
               <p className="text-xs text-destructive">{errors.date.message}</p>
             )}
           </div>

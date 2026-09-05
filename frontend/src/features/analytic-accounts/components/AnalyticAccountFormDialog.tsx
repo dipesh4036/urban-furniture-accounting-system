@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateAnalyticAccount } from "../hooks/useAnalyticAccounts";
 import {
   analyticAccountFormSchema,
@@ -51,11 +52,15 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
     formState: { errors },
   } = useForm<AnalyticAccountFormValues>({
     resolver: zodResolver(analyticAccountFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     // The Select must start with a defined value (empty string, not
     // undefined) or base-ui logs a "switching from uncontrolled to
     // controlled" warning the moment a real type gets picked.
     defaultValues: { name: "", type: "" as AnalyticTypeOption },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: AnalyticAccountFormValues) {
     try {
@@ -88,10 +93,12 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
             <Input
               id="name"
               placeholder="e.g. Design Studio, Marketing Project, Warehouse Ops"
-              aria-invalid={!!errors.name}
+              aria-invalid={firstErrorField === "name"}
               {...register("name")}
             />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            {firstErrorField === "name" && errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -104,7 +111,7 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
               name="type"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                  <SelectTrigger id="type" className="w-full" aria-invalid={firstErrorField === "type"}>
                     <SelectValue placeholder="Select tracking category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -117,7 +124,9 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
                 </Select>
               )}
             />
-            {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+            {firstErrorField === "type" && errors.type && (
+              <p className="text-xs text-destructive">{errors.type.message}</p>
+            )}
           </div>
 
           <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">

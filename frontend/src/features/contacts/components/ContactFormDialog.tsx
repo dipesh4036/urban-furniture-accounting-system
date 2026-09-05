@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { uploadFile } from "@/features/uploads/services/uploads.service";
 import { toFileUrl } from "@/lib/api";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateContact, useUpdateContact } from "../hooks/useContacts";
 import type { Contact } from "../services/contacts.service";
 import {
@@ -90,10 +91,13 @@ export function ContactFormDialog({
     formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: emptyValues(contact),
   });
 
   const profileImage = useWatch({ control, name: "profileImage" });
+  const firstErrorField = getFirstErrorField(errors);
 
   useEffect(() => {
     if (open) {
@@ -234,10 +238,12 @@ export function ContactFormDialog({
               <Input
                 id="name"
                 placeholder="e.g. Acme Corp or John Doe"
-                aria-invalid={!!errors.name}
+                aria-invalid={firstErrorField === "name"}
                 {...register("name")}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {firstErrorField === "name" && errors.name && (
+                <p className="text-xs text-destructive">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -250,7 +256,7 @@ export function ContactFormDialog({
                 name="type"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={firstErrorField === "type"}>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -263,7 +269,9 @@ export function ContactFormDialog({
                   </Select>
                 )}
               />
-              {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+              {firstErrorField === "type" && errors.type && (
+                <p className="text-xs text-destructive">{errors.type.message}</p>
+              )}
             </div>
           </div>
 
@@ -278,10 +286,12 @@ export function ContactFormDialog({
                 id="email"
                 type="email"
                 placeholder="contact@company.com"
-                aria-invalid={!!errors.email}
+                aria-invalid={firstErrorField === "email"}
                 {...register("email")}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              {firstErrorField === "email" && errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -293,10 +303,10 @@ export function ContactFormDialog({
                 id="mobile"
                 type="tel"
                 placeholder="+1 555-0199"
-                aria-invalid={!!errors.mobile}
+                aria-invalid={firstErrorField === "mobile"}
                 {...register("mobile")}
               />
-              {errors.mobile ? (
+              {firstErrorField === "mobile" && errors.mobile ? (
                 <p className="text-xs text-destructive">{errors.mobile.message}</p>
               ) : (
                 <span className="text-[11px] text-muted-foreground">10-15 digits with country code</span>
@@ -318,8 +328,10 @@ export function ContactFormDialog({
                   City
                   <RequiredMark />
                 </Label>
-                <Input id="city" placeholder="e.g. New York" aria-invalid={!!errors.city} {...register("city")} />
-                {errors.city && <p className="text-xs text-destructive">{errors.city.message}</p>}
+                <Input id="city" placeholder="e.g. New York" aria-invalid={firstErrorField === "city"} {...register("city")} />
+                {firstErrorField === "city" && errors.city && (
+                  <p className="text-xs text-destructive">{errors.city.message}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -327,8 +339,10 @@ export function ContactFormDialog({
                   State
                   <RequiredMark />
                 </Label>
-                <Input id="state" placeholder="e.g. NY" aria-invalid={!!errors.state} {...register("state")} />
-                {errors.state && <p className="text-xs text-destructive">{errors.state.message}</p>}
+                <Input id="state" placeholder="e.g. NY" aria-invalid={firstErrorField === "state"} {...register("state")} />
+                {firstErrorField === "state" && errors.state && (
+                  <p className="text-xs text-destructive">{errors.state.message}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -339,10 +353,12 @@ export function ContactFormDialog({
                 <Input
                   id="pincode"
                   placeholder="e.g. 10001"
-                  aria-invalid={!!errors.pincode}
+                  aria-invalid={firstErrorField === "pincode"}
                   {...register("pincode")}
                 />
-                {errors.pincode && <p className="text-xs text-destructive">{errors.pincode.message}</p>}
+                {firstErrorField === "pincode" && errors.pincode && (
+                  <p className="text-xs text-destructive">{errors.pincode.message}</p>
+                )}
               </div>
             </div>
           </div>

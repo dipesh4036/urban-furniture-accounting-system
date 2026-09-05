@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticAccounts } from "@/features/analytic-accounts/hooks/useAnalyticAccounts";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useUsers } from "@/features/users/hooks/useUsers";
 import { useCreateBudget } from "../hooks/useBudgets";
 import { budgetFormSchema, type BudgetFormValues } from "../validators/budgets.validator";
@@ -62,8 +63,12 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
     formState: { errors },
   } = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: emptyBudget,
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   useEffect(() => {
     if (budget) {
@@ -119,10 +124,12 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
               <Input
                 id="name"
                 placeholder="e.g. Q1 Marketing Budget"
-                aria-invalid={!!errors.name}
+                aria-invalid={firstErrorField === "name"}
                 {...register("name")}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {firstErrorField === "name" && errors.name && (
+                <p className="text-xs text-destructive">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -133,10 +140,12 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
               <Input
                 id="period"
                 placeholder="e.g. 2026-Q1 or 2026-FY"
-                aria-invalid={!!errors.period}
+                aria-invalid={firstErrorField === "period"}
                 {...register("period")}
               />
-              {errors.period && <p className="text-xs text-destructive">{errors.period.message}</p>}
+              {firstErrorField === "period" && errors.period && (
+                <p className="text-xs text-destructive">{errors.period.message}</p>
+              )}
             </div>
           </div>
 
@@ -152,10 +161,12 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
                 step="0.01"
                 min="0"
                 placeholder="₹5,000.00"
-                aria-invalid={!!errors.plannedAmount}
+                aria-invalid={firstErrorField === "plannedAmount"}
                 {...register("plannedAmount")}
               />
-              {errors.plannedAmount && <p className="text-xs text-destructive">{errors.plannedAmount.message}</p>}
+              {firstErrorField === "plannedAmount" && errors.plannedAmount && (
+                <p className="text-xs text-destructive">{errors.plannedAmount.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -168,7 +179,7 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
                 name="analyticAccountId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="analyticAccountId" className="w-full" aria-invalid={!!errors.analyticAccountId}>
+                    <SelectTrigger id="analyticAccountId" className="w-full" aria-invalid={firstErrorField === "analyticAccountId"}>
                       <SelectValue placeholder={isLoadingAnalyticAccounts ? "Loading..." : "Select cost center"}>
                         {(selectedId: string) =>
                           analyticAccountsData?.analyticAccounts.find((a) => a.id === selectedId)?.name ??
@@ -186,7 +197,7 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
                   </Select>
                 )}
               />
-              {errors.analyticAccountId && (
+              {firstErrorField === "analyticAccountId" && errors.analyticAccountId && (
                 <p className="text-xs text-destructive">{errors.analyticAccountId.message}</p>
               )}
             </div>
@@ -202,7 +213,7 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
               name="responsiblePersonId"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="responsiblePersonId" className="w-full" aria-invalid={!!errors.responsiblePersonId}>
+                  <SelectTrigger id="responsiblePersonId" className="w-full" aria-invalid={firstErrorField === "responsiblePersonId"}>
                     <SelectValue placeholder={isLoadingUsers ? "Loading..." : "Select responsible manager"}>
                       {(selectedId: string) =>
                         usersData?.users.find((user) => user.id === selectedId)?.name ??
@@ -220,7 +231,7 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
                 </Select>
               )}
             />
-            {errors.responsiblePersonId && (
+            {firstErrorField === "responsiblePersonId" && errors.responsiblePersonId && (
               <p className="text-xs text-destructive">{errors.responsiblePersonId.message}</p>
             )}
           </div>
