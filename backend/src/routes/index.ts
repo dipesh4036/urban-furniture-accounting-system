@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { authRouter } from "./auth.routes";
 
-// This is where every feature's routes get mounted later, e.g.:
-//   router.use("/auth", authRoutes);
+// This is where every feature's routes get mounted. More get added here
+// as each feature branch builds its routes, e.g.:
 //   router.use("/users", userRoutes);
-// Empty for now - filled in as each feature branch adds its routes.
 export const apiRouter = Router();
+
+apiRouter.use("/auth", authRouter);
