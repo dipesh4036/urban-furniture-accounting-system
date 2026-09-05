@@ -1,5 +1,16 @@
 import { api } from "@/lib/api";
-import type { LoginFormValues } from "../validators/auth.validator";
+import type { ContactLoginFormValues, LoginFormValues } from "../validators/auth.validator";
+
+// The Contact shape POST /auth/contact-login returns (see backend
+// src/services/auth.service.ts's SafeContact - never includes the
+// password hash).
+export interface AuthContact {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  role: "CONTACT";
+}
 
 // The staff user shape GET /auth/me returns (see backend
 // src/services/auth.service.ts's getCurrentUser - never includes the
@@ -43,4 +54,17 @@ export function forgotPassword(email: string) {
 // interceptor) if the token is invalid or expired.
 export function resetPassword(token: string, newPassword: string) {
   return api.post("/auth/reset-password", { token, newPassword });
+}
+
+// Calls POST /auth/contact-login (plan.md Module 6).
+export function contactLogin(values: ContactLoginFormValues): Promise<{ contact: AuthContact }> {
+  return api.post("/auth/contact-login", values);
+}
+
+// Calls POST /auth/activate-account with the token from the invitation
+// email plus the password the Contact is setting for the first time.
+// Reuses the same endpoint/shape as resetPassword - see
+// backend/src/services/auth.service.ts's activateAccount.
+export function activateAccount(token: string, newPassword: string) {
+  return api.post("/auth/activate-account", { token, newPassword });
 }

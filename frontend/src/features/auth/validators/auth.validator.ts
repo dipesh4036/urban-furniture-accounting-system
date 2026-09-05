@@ -40,3 +40,30 @@ export const resetPasswordSchema = z
   });
 
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
+// Contact (Customer/Vendor) login - separate from staff login, uses
+// email instead of a Login Id. Mirrors backend's contactLoginSchema.
+export const contactLoginSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type ContactLoginFormValues = z.infer<typeof contactLoginSchema>;
+
+// Same shape as resetPasswordSchema (password + confirm, same complexity
+// rule) - a Contact activating their account for the first time from the
+// email link is really just "set your password from a token", the same
+// flow as a password reset (backend reuses resetPasswordSchema for both).
+// See plan.md Module 0's [FIX]: no Login Id/Email fields here, those come
+// from the invitation token itself.
+export const activateAccountSchema = z
+  .object({
+    newPassword: passwordComplexity,
+    confirmPassword: z.string().min(1, "Please re-enter your password"),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ActivateAccountFormValues = z.infer<typeof activateAccountSchema>;
