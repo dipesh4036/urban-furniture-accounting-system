@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { 
   ShoppingCart, 
@@ -16,17 +17,19 @@ import {
   TrendingUp,
   Activity,
   Plus,
-  CheckCircle2,
   Clock,
   RefreshCw,
-  SlidersHorizontal,
   DollarSign,
   ArrowUpRight,
   Sparkles,
   BarChart3,
   Layers,
   ArrowDownLeft,
-  X
+  AlertCircle,
+  CheckCircle2,
+  Building2,
+  ChevronRight,
+  FileSpreadsheet
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
@@ -37,6 +40,8 @@ import { useBudgets } from "@/features/budgets/hooks/useBudgets";
 import { useJournals } from "@/features/journals/hooks/useJournals";
 import { useJournalEntries } from "@/features/journal-entries/hooks/useJournalEntries";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
+import { useContacts } from "@/features/contacts/hooks/useContacts";
+import { useProducts } from "@/features/products/hooks/useProducts";
 import { SalesOrderForm } from "@/features/sales-orders/components/SalesOrderForm";
 import { PurchaseOrderForm } from "@/features/purchase-orders/components/PurchaseOrderForm";
 import { Button } from "@/components/ui/button";
@@ -51,10 +56,17 @@ function formatMoney(amount: number): string {
   }).format(amount);
 }
 
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 const moduleCategories = [
   {
     title: "Sales & Fulfillment",
-    description: "Manage customer orders, invoices, and payments",
+    description: "Manage customer orders, billing, and order pipelines",
     icon: ShoppingCart,
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
@@ -62,11 +74,12 @@ const moduleCategories = [
     links: [
       { label: "Sales Orders", href: "/sales-orders", icon: ShoppingCart },
       { label: "Customer Invoices", href: "/invoices", icon: FileText },
+      { label: "Contacts & Clients", href: "/contacts", icon: Users },
     ],
   },
   {
-    title: "Purchasing",
-    description: "Handle vendors, purchase orders, and supplier bills",
+    title: "Purchasing & Inventory",
+    description: "Vendor procurement, product catalog, and supplier bills",
     icon: Package,
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
@@ -74,6 +87,7 @@ const moduleCategories = [
     links: [
       { label: "Purchase Orders", href: "/purchase-orders", icon: Package },
       { label: "Vendor Bills", href: "/vendor-bills", icon: Receipt },
+      { label: "Product Catalog", href: "/products", icon: Package },
     ],
   },
   {
@@ -92,8 +106,8 @@ const moduleCategories = [
     ],
   },
   {
-    title: "Business Intelligence",
-    description: "Financial statements, analytics, and performance reports",
+    title: "Financial Intelligence",
+    description: "Financial statements, P&L reports, and budget analysis",
     icon: PieChart,
     color: "text-amber-500",
     bgColor: "bg-amber-500/10",
@@ -123,8 +137,17 @@ export default function DashboardPage() {
   const { data: journalsData, isLoading: journalsLoading, refetch: refetchJournals } = useJournals();
   const { data: entriesData, isLoading: entriesLoading, refetch: refetchEntries } = useJournalEntries();
   const { data: accountsData, isLoading: accountsLoading, refetch: refetchAccounts } = useAccounts();
+  const { data: contactsData, isLoading: contactsLoading, refetch: refetchContacts } = useContacts();
+  const { data: productsData, isLoading: productsLoading, refetch: refetchProducts } = useProducts();
 
-  const isAnyLoading = salesLoading || purchaseLoading || invoiceLoading || billsLoading || budgetsLoading || journalsLoading;
+  const isAnyLoading =
+    salesLoading ||
+    purchaseLoading ||
+    invoiceLoading ||
+    billsLoading ||
+    budgetsLoading ||
+    journalsLoading ||
+    accountsLoading;
 
   const handleRefreshAll = () => {
     refetchSales();
@@ -135,89 +158,247 @@ export default function DashboardPage() {
     refetchJournals();
     refetchEntries();
     refetchAccounts();
+    refetchContacts();
+    refetchProducts();
   };
 
   // Sales computations
-  const salesOrders = salesData?.salesOrders ?? [];
+  const salesOrders = useMemo(() => salesData?.salesOrders ?? [], [salesData]);
   const salesTotalCount = salesOrders.length;
   const salesConfirmedCount = salesOrders.filter((s) => s.status === "CONFIRMED" || s.status === "BILLED").length;
   const salesDraftCount = salesOrders.filter((s) => s.status === "DRAFT").length;
-  const salesTotalRevenue = salesOrders.reduce((sum, so) => {
-    const orderSum = so.items.reduce((iSum, it) => iSum + it.quantity * Number(it.unitPrice) + Number(it.tax), 0);
-    return sum + orderSum;
-  }, 0);
+  const salesTotalRevenue = useMemo(() => {
+    return salesOrders.reduce((sum, so) => {
+      const orderSum = so.items.reduce((iSum, it) => iSum + it.quantity * Number(it.unitPrice) + Number(it.tax || 0), 0);
+      return sum + orderSum;
+    }, 0);
+  }, [salesOrders]);
 
   // Invoices computations
-  const customerInvoices = invoiceData?.customerInvoices ?? [];
-  const unpaidInvoicesCount = customerInvoices.filter((inv) => inv.status === "UNPAID" || inv.status === "PARTIALLY_PAID").length;
+  const customerInvoices = useMemo(() => invoiceData?.customerInvoices ?? [], [invoiceData]);
+  const unpaidInvoicesCount = customerInvoices.filter(
+    (inv) => inv.status === "UNPAID" || inv.status === "PARTIALLY_PAID"
+  ).length;
+  const unpaidInvoicesAmount = useMemo(() => {
+    return customerInvoices
+      .filter((inv) => inv.status === "UNPAID" || inv.status === "PARTIALLY_PAID")
+      .reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
+  }, [customerInvoices]);
 
   // Purchase computations
-  const purchaseOrders = purchaseData?.purchaseOrders ?? [];
+  const purchaseOrders = useMemo(() => purchaseData?.purchaseOrders ?? [], [purchaseData]);
   const purchaseTotalCount = purchaseOrders.length;
   const purchaseConfirmedCount = purchaseOrders.filter((p) => p.status === "CONFIRMED" || p.status === "BILLED").length;
   const purchaseDraftCount = purchaseOrders.filter((p) => p.status === "DRAFT").length;
-  const purchaseTotalSpend = purchaseOrders.reduce((sum, po) => {
-    const poSum = po.items.reduce((iSum, it) => iSum + it.quantity * Number(it.unitPrice), 0);
-    return sum + poSum;
-  }, 0);
+  const purchaseTotalSpend = useMemo(() => {
+    return purchaseOrders.reduce((sum, po) => {
+      const poSum = po.items.reduce((iSum, it) => iSum + it.quantity * Number(it.unitPrice), 0);
+      return sum + poSum;
+    }, 0);
+  }, [purchaseOrders]);
 
   // Vendor Bills computations
-  const vendorBills = billsData?.vendorBills ?? [];
-  const pendingBillsCount = vendorBills.filter((bill) => bill.status === "UNPAID" || bill.status === "PARTIALLY_PAID").length;
+  const vendorBills = useMemo(() => billsData?.vendorBills ?? [], [billsData]);
+  const pendingBillsCount = vendorBills.filter(
+    (bill) => bill.status === "UNPAID" || bill.status === "PARTIALLY_PAID"
+  ).length;
 
   // Budgets computations
-  const budgets = budgetsData?.budgets ?? [];
+  const budgets = useMemo(() => budgetsData?.budgets ?? [], [budgetsData]);
   const budgetsCount = budgets.length;
-  const totalPlannedBudget = budgets.reduce((sum, b) => sum + Number(b.plannedAmount || 0), 0);
+  const totalPlannedBudget = useMemo(() => {
+    return budgets.reduce((sum, b) => sum + Number(b.plannedAmount || 0), 0);
+  }, [budgets]);
   const achievedCount = budgets.filter((b) => Number(b.plannedAmount) > 0).length;
   const committedCount = purchaseOrders.filter((p) => p.status === "CONFIRMED").length;
 
   // Accounting computations
-  const journals = journalsData?.journals ?? [];
+  const journals = useMemo(() => journalsData?.journals ?? [], [journalsData]);
   const journalsCount = journals.length;
-  const entries = entriesData?.entries ?? [];
+  const entries = useMemo(() => entriesData?.entries ?? [], [entriesData]);
   const entriesCount = entries.length;
   const accountsCount = accountsData?.accounts?.length ?? 0;
+  const contactsCount = contactsData?.contacts?.length ?? 0;
+  const productsCount = productsData?.products?.length ?? 0;
+
+  const greeting = getTimeGreeting();
 
   return (
-    <div className="flex flex-col gap-5 pb-10">
-      {/* Sleek Minimal Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
-            {user ? `Welcome, ${user.name}` : "Dashboard"}
-          </h1>
-          {user?.role && (
-            <Badge variant="secondary" className="text-[11px] font-semibold uppercase tracking-wider">
-              {user.role}
-            </Badge>
-          )}
+    <div className="flex flex-col gap-6 pb-12">
+      {/* 1. Hero Showcase Banner with Luxury Architectural Theme */}
+      <div className="relative overflow-hidden rounded-3xl border bg-card shadow-md">
+        {/* Background Banner Image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/furniture-banner.jpg"
+            alt="Urban Furniture Interior"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center scale-105 transition-transform duration-1000 hover:scale-100"
+          />
+          {/* Subtle gradient overlay for readability and rich depth */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={isAnyLoading}
-            className="h-8 gap-1.5 text-xs bg-card shadow-2xs hover:bg-muted"
-          >
-            <RefreshCw className={`size-3.5 ${isAnyLoading ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </Button>
+        {/* Content Container */}
+        <div className="relative z-10 flex flex-col justify-between gap-6 p-6 sm:p-8 md:p-10 text-white min-h-[260px]">
+          {/* Top Bar inside Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-md border border-white/20">
+                <Sparkles className="size-3.5 text-amber-300" />
+                <span>Urban Furniture System</span>
+              </span>
+              {user?.role && (
+                <span className="inline-flex items-center rounded-full bg-primary/80 px-2.5 py-0.5 text-xs font-medium text-white backdrop-blur-md">
+                  {user.role === "ADMIN" ? "Administrator" : user.role === "ACCOUNTANT" ? "Accountant" : user.role}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshAll}
+                disabled={isAnyLoading}
+                className="h-8 gap-1.5 text-xs bg-black/40 text-white border-white/20 backdrop-blur-md hover:bg-white/20 hover:text-white"
+              >
+                <RefreshCw className={`size-3.5 ${isAnyLoading ? "animate-spin" : ""}`} />
+                <span>{isAnyLoading ? "Syncing..." : "Sync Live Data"}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Center Main Greeting & Quick Actions */}
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div className="max-w-2xl">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">
+                {greeting}, {user?.name ?? "Finance Team"}
+              </h1>
+              <p className="mt-1.5 text-sm sm:text-base text-white/80 leading-relaxed max-w-xl">
+                Real-time financial control, sales fulfillment, vendor procurement, and double-entry accounting overview.
+              </p>
+            </div>
+
+            {/* Quick Executive CTA Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                size="sm"
+                onClick={() => setIsSalesDialogOpen(true)}
+                className="gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-md px-4 py-2 text-xs sm:text-sm"
+              >
+                <Plus className="size-4" />
+                <span>New Sales Order</span>
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => setIsPurchaseDialogOpen(true)}
+                className="gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-md px-4 py-2 text-xs sm:text-sm"
+              >
+                <Plus className="size-4" />
+                <span>New PO</span>
+              </Button>
+
+              <Link href="/reports/profit-loss">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border-white/25 backdrop-blur-md font-medium px-3.5 py-2 text-xs sm:text-sm"
+                >
+                  <BarChart3 className="size-4 text-amber-300" />
+                  <span>P&L Report</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Bottom Live Snapshot Chips */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-white/15">
+            <div className="flex flex-col rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/10">
+              <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Total Sales Revenue</span>
+              <span className="text-base sm:text-lg font-bold text-white mt-0.5 truncate">
+                {salesLoading ? "..." : formatMoney(salesTotalRevenue)}
+              </span>
+            </div>
+
+            <div className="flex flex-col rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/10">
+              <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Procurement Spend</span>
+              <span className="text-base sm:text-lg font-bold text-white mt-0.5 truncate">
+                {purchaseLoading ? "..." : formatMoney(purchaseTotalSpend)}
+              </span>
+            </div>
+
+            <div className="flex flex-col rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/10">
+              <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Unpaid Invoices</span>
+              <span className="text-base sm:text-lg font-bold text-amber-300 mt-0.5 truncate">
+                {invoiceLoading ? "..." : `${unpaidInvoicesCount} (${formatMoney(unpaidInvoicesAmount)})`}
+              </span>
+            </div>
+
+            <div className="flex flex-col rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/10">
+              <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Double-Entry Status</span>
+              <span className="inline-flex items-center gap-1.5 text-base sm:text-lg font-bold text-emerald-400 mt-0.5">
+                <CheckCircle2 className="size-4" />
+                <span>Balanced</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tabs Filter Bar (Sales | Purchase | Account | Report) */}
+      {/* 2. Action Required / Priority Alerts Bar (if applicable) */}
+      {(unpaidInvoicesCount > 0 || salesDraftCount > 0 || pendingBillsCount > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-950 dark:text-amber-200">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <AlertCircle className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Operational Attention Required</p>
+              <p className="text-xs text-muted-foreground">
+                You have {unpaidInvoicesCount > 0 ? `${unpaidInvoicesCount} unpaid invoices` : ""}
+                {unpaidInvoicesCount > 0 && salesDraftCount > 0 ? ", " : ""}
+                {salesDraftCount > 0 ? `${salesDraftCount} draft sales orders` : ""}
+                {(unpaidInvoicesCount > 0 || salesDraftCount > 0) && pendingBillsCount > 0 ? ", " : ""}
+                {pendingBillsCount > 0 ? `${pendingBillsCount} pending vendor bills` : ""}.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {unpaidInvoicesCount > 0 && (
+              <Link href="/invoices">
+                <Button size="sm" variant="outline" className="h-8 text-xs border-amber-500/30 hover:bg-amber-500/10">
+                  <span>View Invoices</span>
+                  <ArrowRight className="size-3 ml-1" />
+                </Button>
+              </Link>
+            )}
+            {pendingBillsCount > 0 && (
+              <Link href="/vendor-bills">
+                <Button size="sm" variant="outline" className="h-8 text-xs border-amber-500/30 hover:bg-amber-500/10">
+                  <span>Review Bills</span>
+                  <ArrowRight className="size-3 ml-1" />
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Navigation Filter Tabs Bar */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between border-b pb-3">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: "all", label: "All Overview", icon: Layers, count: null },
-              { id: "sales", label: "Sales", icon: ShoppingCart, count: salesTotalCount },
-              { id: "purchase", label: "Purchase", icon: Package, count: purchaseTotalCount },
-              { id: "account", label: "Account", icon: BookOpen, count: journalsCount },
-              { id: "report", label: "Report", icon: PieChart, count: budgetsCount },
+              { id: "all", label: "Overview Hub", icon: Layers, count: null },
+              { id: "sales", label: "Sales & Invoicing", icon: ShoppingCart, count: salesTotalCount },
+              { id: "purchase", label: "Purchasing & Bills", icon: Package, count: purchaseTotalCount },
+              { id: "account", label: "Core Accounting", icon: BookOpen, count: journalsCount },
+              { id: "report", label: "Financial Reports", icon: PieChart, count: budgetsCount },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -227,7 +408,7 @@ export default function DashboardPage() {
                   onClick={() => setActiveTab(tab.id as TabType)}
                   className={`group relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm font-semibold"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
@@ -235,9 +416,9 @@ export default function DashboardPage() {
                   <span>{tab.label}</span>
                   {tab.count !== null && (
                     <span
-                      className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold ${
                         isActive
-                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          ? "bg-primary-foreground/25 text-primary-foreground"
                           : "bg-background text-muted-foreground"
                       }`}
                     >
@@ -251,31 +432,31 @@ export default function DashboardPage() {
 
           <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="size-3.5" />
-            <span>Live Sync Active</span>
+            <span>Realtime Ledger Sync</span>
           </div>
         </div>
 
-        {/* Section 1: Main Metric KPI Cards (Matching User's Sketch) */}
+        {/* 4. Section 1: Main Metric KPI Cards */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {/* Card 1: Sales */}
           {(activeTab === "all" || activeTab === "sales") && (
-            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-blue-500/40">
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-xs transition-all duration-300 hover:shadow-md hover:border-blue-500/40">
               <div className="flex flex-col gap-4">
                 {/* Header with Title and "New" Action Button */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                       <ShoppingCart className="size-5" />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold tracking-tight text-foreground">Sales</h2>
-                      <p className="text-xs text-muted-foreground">Customer orders & pipeline</p>
+                      <h2 className="text-base font-semibold tracking-tight text-foreground">Sales Pipeline</h2>
+                      <p className="text-xs text-muted-foreground">Orders, deliveries & invoicing</p>
                     </div>
                   </div>
                   <Button
                     size="sm"
                     onClick={() => setIsSalesDialogOpen(true)}
-                    className="gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs font-medium px-3.5"
+                    className="gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
                   >
                     <Plus className="size-3.5" />
                     <span>New</span>
@@ -286,9 +467,9 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-3 gap-2.5 pt-2">
                   <Link
                     href="/sales-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
                   >
-                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-blue-600">All</span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-blue-600">All Orders</span>
                     <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
                       {salesLoading ? "..." : salesTotalCount}
                     </span>
@@ -296,20 +477,20 @@ export default function DashboardPage() {
 
                   <Link
                     href="/sales-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
                   >
                     <span className="text-xs font-medium text-muted-foreground group-hover/box:text-emerald-600">Confirmed</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-0.5">
                       {salesLoading ? "..." : salesConfirmedCount}
                     </span>
                   </Link>
 
                   <Link
                     href="/sales-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
                   >
                     <span className="text-xs font-medium text-muted-foreground group-hover/box:text-amber-600">Draft</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 mt-0.5">
                       {salesLoading ? "..." : salesDraftCount}
                     </span>
                   </Link>
@@ -320,7 +501,7 @@ export default function DashboardPage() {
               <div className="mt-5 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="size-3.5 text-blue-500" />
-                  <span>Total Value: <strong className="text-foreground font-semibold">{formatMoney(salesTotalRevenue)}</strong></span>
+                  <span>Total Order Value: <strong className="text-foreground font-semibold">{formatMoney(salesTotalRevenue)}</strong></span>
                 </div>
                 <Link href="/invoices" className="flex items-center gap-1 font-medium text-blue-600 hover:underline">
                   <span>{customerInvoices.length} Invoices</span>
@@ -332,23 +513,23 @@ export default function DashboardPage() {
 
           {/* Card 2: Purchase */}
           {(activeTab === "all" || activeTab === "purchase") && (
-            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-emerald-500/40">
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-xs transition-all duration-300 hover:shadow-md hover:border-emerald-500/40">
               <div className="flex flex-col gap-4">
                 {/* Header with Title and "New" Action Button */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                       <Package className="size-5" />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold tracking-tight text-foreground">Purchase</h2>
-                      <p className="text-xs text-muted-foreground">Vendor procurement & POs</p>
+                      <h2 className="text-base font-semibold tracking-tight text-foreground">Purchasing & POs</h2>
+                      <p className="text-xs text-muted-foreground">Supplier procurement & expenses</p>
                     </div>
                   </div>
                   <Button
                     size="sm"
                     onClick={() => setIsPurchaseDialogOpen(true)}
-                    className="gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs font-medium px-3.5"
+                    className="gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
                   >
                     <Plus className="size-3.5" />
                     <span>New</span>
@@ -359,9 +540,9 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-3 gap-2.5 pt-2">
                   <Link
                     href="/purchase-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
                   >
-                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-emerald-600">All</span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-emerald-600">All POs</span>
                     <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
                       {purchaseLoading ? "..." : purchaseTotalCount}
                     </span>
@@ -369,20 +550,20 @@ export default function DashboardPage() {
 
                   <Link
                     href="/purchase-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
                   >
                     <span className="text-xs font-medium text-muted-foreground group-hover/box:text-blue-600">Confirmed</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400 mt-0.5">
                       {purchaseLoading ? "..." : purchaseConfirmedCount}
                     </span>
                   </Link>
 
                   <Link
                     href="/purchase-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
                   >
                     <span className="text-xs font-medium text-muted-foreground group-hover/box:text-amber-600">Draft</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 mt-0.5">
                       {purchaseLoading ? "..." : purchaseDraftCount}
                     </span>
                   </Link>
@@ -405,23 +586,23 @@ export default function DashboardPage() {
 
           {/* Card 3: Budget Reports */}
           {(activeTab === "all" || activeTab === "report") && (
-            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-violet-500/40">
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-xs transition-all duration-300 hover:shadow-md hover:border-violet-500/40">
               <div className="flex flex-col gap-4">
                 {/* Header with Title and "Report" Action Button */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
                       <PieChart className="size-5" />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold tracking-tight text-foreground">Budget Reports</h2>
-                      <p className="text-xs text-muted-foreground">Variance & planned allocations</p>
+                      <h2 className="text-base font-semibold tracking-tight text-foreground">Budget Intelligence</h2>
+                      <p className="text-xs text-muted-foreground">Allocations & variance tracking</p>
                     </div>
                   </div>
                   <Link href="/reports/budget-report">
                     <Button
                       size="sm"
-                      className="gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow-2xs font-medium px-3.5"
+                      className="gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
                     >
                       <BarChart3 className="size-3.5" />
                       <span>Report</span>
@@ -433,19 +614,19 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-3 gap-2.5 pt-2">
                   <Link
                     href="/reports/budget-report"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-violet-500/10 hover:border-violet-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-violet-500/10 hover:border-violet-500/30 group/box"
                   >
-                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-violet-600">Achieved</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-violet-600">Active Lines</span>
+                    <span className="text-xl font-bold tracking-tight text-violet-600 dark:text-violet-400 mt-0.5">
                       {budgetsLoading ? "..." : achievedCount}
                     </span>
                   </Link>
 
                   <Link
                     href="/budgets"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
                   >
-                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-blue-600">Budget</span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-blue-600">Budgets</span>
                     <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
                       {budgetsLoading ? "..." : budgetsCount}
                     </span>
@@ -453,10 +634,10 @@ export default function DashboardPage() {
 
                   <Link
                     href="/purchase-orders"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-3 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
                   >
-                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-emerald-600">Committed</span>
-                    <span className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground group-hover/box:text-emerald-600">Committed POs</span>
+                    <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-0.5">
                       {budgetsLoading ? "..." : committedCount}
                     </span>
                   </Link>
@@ -479,23 +660,23 @@ export default function DashboardPage() {
 
           {/* Card 4: Accounting & Journals */}
           {(activeTab === "all" || activeTab === "account") && (
-            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-amber-500/40">
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-xs transition-all duration-300 hover:shadow-md hover:border-amber-500/40">
               <div className="flex flex-col gap-4">
                 {/* Header with Title and "Manage" Action Button */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
                       <BookOpen className="size-5" />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold tracking-tight text-foreground">Accounting & Journals</h2>
-                      <p className="text-xs text-muted-foreground">General ledger & journal entries</p>
+                      <h2 className="text-base font-semibold tracking-tight text-foreground">General Ledger</h2>
+                      <p className="text-xs text-muted-foreground">Chart of accounts & journal entries</p>
                     </div>
                   </div>
                   <Link href="/journal-entries">
                     <Button
                       size="sm"
-                      className="gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-2xs font-medium px-3.5"
+                      className="gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
                     >
                       <Plus className="size-3.5" />
                       <span>New Entry</span>
@@ -503,11 +684,11 @@ export default function DashboardPage() {
                   </Link>
                 </div>
 
-                {/* 4 Metric Pills (Journals, Total Entries, Accounts, Budgets) */}
+                {/* 4 Metric Pills (Journals, Total Entries, Accounts, Contacts) */}
                 <div className="grid grid-cols-4 gap-2 pt-2">
                   <Link
                     href="/journals"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-2.5 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-2.5 text-center transition-all hover:bg-amber-500/10 hover:border-amber-500/30 group/box"
                   >
                     <span className="text-[11px] font-medium text-muted-foreground group-hover/box:text-amber-600">Journals</span>
                     <span className="text-lg font-bold tracking-tight text-foreground mt-0.5">
@@ -517,7 +698,7 @@ export default function DashboardPage() {
 
                   <Link
                     href="/journal-entries"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-2.5 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-2.5 text-center transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30 group/box"
                   >
                     <span className="text-[11px] font-medium text-muted-foreground group-hover/box:text-emerald-600">Entries</span>
                     <span className="text-lg font-bold tracking-tight text-foreground mt-0.5">
@@ -527,7 +708,7 @@ export default function DashboardPage() {
 
                   <Link
                     href="/accounts"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-2.5 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-2.5 text-center transition-all hover:bg-blue-500/10 hover:border-blue-500/30 group/box"
                   >
                     <span className="text-[11px] font-medium text-muted-foreground group-hover/box:text-blue-600">Accounts</span>
                     <span className="text-lg font-bold tracking-tight text-foreground mt-0.5">
@@ -536,12 +717,12 @@ export default function DashboardPage() {
                   </Link>
 
                   <Link
-                    href="/budgets"
-                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/40 p-2.5 text-center transition-all hover:bg-violet-500/10 hover:border-violet-500/30 group/box"
+                    href="/contacts"
+                    className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 p-2.5 text-center transition-all hover:bg-violet-500/10 hover:border-violet-500/30 group/box"
                   >
-                    <span className="text-[11px] font-medium text-muted-foreground group-hover/box:text-violet-600">Budgets</span>
+                    <span className="text-[11px] font-medium text-muted-foreground group-hover/box:text-violet-600">Contacts</span>
                     <span className="text-lg font-bold tracking-tight text-foreground mt-0.5">
-                      {budgetsLoading ? "..." : budgetsCount}
+                      {contactsLoading ? "..." : contactsCount}
                     </span>
                   </Link>
                 </div>
@@ -551,7 +732,7 @@ export default function DashboardPage() {
               <div className="mt-5 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Activity className="size-3.5 text-amber-500" />
-                  <span>Double-Entry Balance: <strong className="text-emerald-600 font-semibold">In Balance</strong></span>
+                  <span>Double-Entry Balance: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">In Balance</strong></span>
                 </div>
                 <Link href="/accounts" className="flex items-center gap-1 font-medium text-amber-600 hover:underline">
                   <span>Chart of Accounts</span>
@@ -563,16 +744,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Deep-dive Tab Specific Highlights */}
-      {activeTab === "sales" && (
-        <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
+      {/* 5. Deep-dive Tab Specific Highlights */}
+      {(activeTab === "all" || activeTab === "sales") && (
+        <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-xs">
           <div className="flex items-center justify-between border-b pb-4">
             <div>
-              <h3 className="text-lg font-semibold tracking-tight">Recent Sales Activity</h3>
-              <p className="text-xs text-muted-foreground">Latest customer orders awaiting delivery or payment</p>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">Recent Sales Activity</h3>
+              <p className="text-xs text-muted-foreground">Latest customer orders and pipeline fulfillment status</p>
             </div>
             <Link href="/sales-orders">
-              <Button variant="outline" size="sm" className="gap-1 text-xs">
+              <Button variant="outline" size="sm" className="gap-1 text-xs h-8">
                 <span>View All Orders</span>
                 <ArrowRight className="size-3.5" />
               </Button>
@@ -580,43 +761,45 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col divide-y">
-            {salesOrders.slice(0, 4).map((order) => (
-              <div key={order.id} className="flex items-center justify-between py-3">
+            {salesOrders.slice(0, 5).map((order) => (
+              <div key={order.id} className="flex flex-wrap items-center justify-between py-3.5 gap-2 hover:bg-muted/30 px-2 rounded-lg transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 font-semibold text-xs">
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 font-bold text-xs">
                     SO
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{order.soNumber}</p>
-                    <p className="text-xs text-muted-foreground">{order.customer?.name || "Customer"} · {order.date}</p>
+                    <p className="text-sm font-semibold text-foreground">{order.soNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.customer?.name || "Walk-in Customer"} · {new Date(order.date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={order.status === "CONFIRMED" ? "default" : "secondary"}>
+                  <Badge variant={order.status === "CONFIRMED" ? "default" : order.status === "BILLED" ? "outline" : "secondary"}>
                     {order.status}
                   </Badge>
-                  <span className="text-sm font-semibold">
-                    {formatMoney(order.items.reduce((s, it) => s + it.quantity * Number(it.unitPrice) + Number(it.tax), 0))}
+                  <span className="text-sm font-bold text-foreground">
+                    {formatMoney(order.items.reduce((s, it) => s + it.quantity * Number(it.unitPrice) + Number(it.tax || 0), 0))}
                   </span>
                 </div>
               </div>
             ))}
             {salesOrders.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted-foreground">No sales orders found.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No sales orders created yet.</p>
             )}
           </div>
         </div>
       )}
 
-      {activeTab === "purchase" && (
-        <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
+      {(activeTab === "all" || activeTab === "purchase") && (
+        <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-xs">
           <div className="flex items-center justify-between border-b pb-4">
             <div>
-              <h3 className="text-lg font-semibold tracking-tight">Recent Purchase Activity</h3>
-              <p className="text-xs text-muted-foreground">Latest procurement orders with suppliers</p>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">Recent Purchase Orders</h3>
+              <p className="text-xs text-muted-foreground">Latest procurement orders with raw material & finished goods suppliers</p>
             </div>
             <Link href="/purchase-orders">
-              <Button variant="outline" size="sm" className="gap-1 text-xs">
+              <Button variant="outline" size="sm" className="gap-1 text-xs h-8">
                 <span>View All POs</span>
                 <ArrowRight className="size-3.5" />
               </Button>
@@ -624,46 +807,49 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col divide-y">
-            {purchaseOrders.slice(0, 4).map((po) => (
-              <div key={po.id} className="flex items-center justify-between py-3">
+            {purchaseOrders.slice(0, 5).map((po) => (
+              <div key={po.id} className="flex flex-wrap items-center justify-between py-3.5 gap-2 hover:bg-muted/30 px-2 rounded-lg transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-semibold text-xs">
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-xs">
                     PO
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{po.poNumber}</p>
-                    <p className="text-xs text-muted-foreground">{po.vendor?.name || "Vendor"} · {po.date}</p>
+                    <p className="text-sm font-semibold text-foreground">{po.poNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {po.vendor?.name || "Supplier"} · {new Date(po.date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={po.status === "CONFIRMED" ? "default" : "secondary"}>
+                  <Badge variant={po.status === "CONFIRMED" ? "default" : po.status === "BILLED" ? "outline" : "secondary"}>
                     {po.status}
                   </Badge>
-                  <span className="text-sm font-semibold">
+                  <span className="text-sm font-bold text-foreground">
                     {formatMoney(po.items.reduce((s, it) => s + it.quantity * Number(it.unitPrice), 0))}
                   </span>
                 </div>
               </div>
             ))}
             {purchaseOrders.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted-foreground">No purchase orders found.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No purchase orders created yet.</p>
             )}
           </div>
         </div>
       )}
 
-      {activeTab === "report" && (
+      {/* Reports tab dedicated spotlight */}
+      {(activeTab === "all" || activeTab === "report") && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Link
             href="/reports/balance-sheet"
-            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-xs transition-all hover:border-primary/50 hover:shadow-md"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Activity className="size-5" />
               </div>
-              <h4 className="font-semibold tracking-tight text-foreground">Balance Sheet</h4>
-              <p className="text-xs text-muted-foreground">Assets, Liabilities & Equity equation at a specific date.</p>
+              <h4 className="font-semibold tracking-tight text-foreground">Balance Sheet Statement</h4>
+              <p className="text-xs text-muted-foreground">Assets = Liabilities + Equity double-entry health analysis.</p>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
               <span>Generate Statement</span>
@@ -673,14 +859,14 @@ export default function DashboardPage() {
 
           <Link
             href="/reports/profit-loss"
-            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-xs transition-all hover:border-emerald-500/50 hover:shadow-md"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
                 <TrendingUp className="size-5" />
               </div>
-              <h4 className="font-semibold tracking-tight text-foreground">Profit & Loss</h4>
-              <p className="text-xs text-muted-foreground">Revenue, Cost of Goods Sold, and Net Operating Income.</p>
+              <h4 className="font-semibold tracking-tight text-foreground">Profit & Loss (P&L)</h4>
+              <p className="text-xs text-muted-foreground">Operating revenue, COGS, gross margins, and net income.</p>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-600">
               <span>View P&L Report</span>
@@ -690,14 +876,14 @@ export default function DashboardPage() {
 
           <Link
             href="/reports/budget-report"
-            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+            className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-xs transition-all hover:border-violet-500/50 hover:shadow-md"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
                 <PieChart className="size-5" />
               </div>
-              <h4 className="font-semibold tracking-tight text-foreground">Budget vs Actual</h4>
-              <p className="text-xs text-muted-foreground">Analytic account variances and planned spending limits.</p>
+              <h4 className="font-semibold tracking-tight text-foreground">Budget Variance Analysis</h4>
+              <p className="text-xs text-muted-foreground">Analytic account variances, planned limits, and practical tracking.</p>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-violet-600">
               <span>Track Budget Report</span>
@@ -707,22 +893,22 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Section 2: Complete Module Directory & Navigation Grid */}
-      <div className="flex flex-col gap-4">
+      {/* 6. Section: Complete System Navigation & Modules Directory */}
+      <div className="flex flex-col gap-4 pt-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">System Navigation & Modules</h2>
-            <p className="text-xs text-muted-foreground">Quick access to all operational areas and master data</p>
+            <h2 className="text-base font-semibold tracking-tight text-foreground">System Modules & Operations Directory</h2>
+            <p className="text-xs text-muted-foreground">Quick access to all core operational workflows and master data</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
           {moduleCategories.map((category) => {
             const CategoryIcon = category.icon;
             return (
               <div
                 key={category.title}
-                className={`group flex flex-col justify-between rounded-2xl border bg-card shadow-sm transition-all duration-200 ${category.borderColor} hover:shadow-md`}
+                className={`group flex flex-col justify-between rounded-2xl border bg-card shadow-xs transition-all duration-200 ${category.borderColor} hover:shadow-md`}
               >
                 <div>
                   <div className="flex items-start gap-3.5 border-b p-5">
@@ -730,7 +916,7 @@ export default function DashboardPage() {
                       <CategoryIcon className={`size-5 ${category.color}`} />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <h3 className="font-semibold tracking-tight text-sm">{category.title}</h3>
+                      <h3 className="font-semibold tracking-tight text-sm text-foreground">{category.title}</h3>
                       <p className="text-xs text-muted-foreground leading-snug">{category.description}</p>
                     </div>
                   </div>
@@ -741,7 +927,7 @@ export default function DashboardPage() {
                         <Link
                           key={link.href}
                           href={link.href}
-                          className="group/link flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-xs font-medium transition-colors hover:bg-muted"
+                          className="group/link flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
                         >
                           <LinkIcon className="size-3.5 text-muted-foreground group-hover/link:text-foreground" />
                           <span className="flex-1 text-muted-foreground group-hover/link:text-foreground">
@@ -759,13 +945,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick "New Sales Order" Dialog Modal */}
+      {/* 7. Quick "New Sales Order" Dialog Modal */}
       <Dialog open={isSalesDialogOpen} onOpenChange={setIsSalesDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Sales Order</DialogTitle>
             <DialogDescription>
-              Draft a new sales order with line items and taxes.
+              Draft a new customer sales order with line items, quantities, and taxes.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
@@ -781,13 +967,13 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Quick "New Purchase Order" Dialog Modal */}
+      {/* 8. Quick "New Purchase Order" Dialog Modal */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Purchase Order</DialogTitle>
             <DialogDescription>
-              Draft a new purchase order for supplier goods and raw materials.
+              Draft a new purchase order for supplier goods, raw timber, and inventory.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
