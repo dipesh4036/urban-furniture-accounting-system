@@ -25,7 +25,6 @@ export const payVendorBillController = asyncHandler(async (req: Request, res: Re
     timestamp: new Date().toISOString(),
   });
 });
-
 export const payCustomerInvoiceController = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (user.role === "CONTACT") {

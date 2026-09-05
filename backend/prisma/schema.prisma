@@ -30,6 +30,7 @@ model User {
   resetTokenExpiresAt DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+  budgets             Budget[]
 
   @@map("users")
 }
@@ -159,11 +160,15 @@ enum DocStatus {
 enum PaymentType {
   RECEIPT
   PAYMENT
+  REFUND
 }
 
 enum PaymentMethod {
+  BANK_TRANSFER
+  CHEQUE
   CASH
-  BANK
+  CARD
+  ONLINE
 }
 
 enum ContactType {
@@ -177,10 +182,10 @@ enum ContactType {
 // which triggers an activation email so the Contact can set their own
 // password and log in to the portal. See plan.md Module 6.
 model Contact {
-  id                       String            @id @default(cuid())
+  id                       String          @id @default(cuid())
   name                     String
   type                     ContactType
-  email                    String            @unique
+  email                    String          @unique
   mobile                   String
   city                     String
   state                    String
@@ -189,14 +194,14 @@ model Contact {
   // the image itself - see POST /uploads and profileImageSchema.
   profileImage             String?
   passwordHash             String? // null until the Contact activates their account
-  isActivated              Boolean           @default(false)
+  isActivated              Boolean         @default(false)
   activationToken          String?
   activationTokenExpiresAt DateTime?
   resetToken               String?
   resetTokenExpiresAt      DateTime?
-  isActive                 Boolean           @default(true)
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
+  isActive                 Boolean         @default(true)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
   purchaseOrders           PurchaseOrder[]
   vendorBills              VendorBill[]
   salesOrders              SalesOrder[]
@@ -204,6 +209,46 @@ model Contact {
 
   @@index([type])
   @@map("contacts")
+}
+
+enum AnalyticType {
+  INCOME
+  EXPENSE
+}
+
+// A cost/revenue center (e.g. "Marketing", "Warehouse Ops") that Budgets
+// are tracked against, independent of the Chart of Accounts. See plan.md
+// Module 11.
+model AnalyticAccount {
+  id        String       @id @default(cuid())
+  name      String
+  type      AnalyticType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  budgets   Budget[]
+
+  @@map("analytic_accounts")
+}
+
+// A planned amount for an AnalyticAccount over a period (e.g.
+// "2026-Q1"), owned by a staff User. onDelete: Restrict on both FKs
+// means an AnalyticAccount or User can't be deleted while a Budget
+// still references it. See plan.md Module 11.
+model Budget {
+  id                  String          @id @default(cuid())
+  name                String
+  period              String
+  plannedAmount       Decimal         @db.Decimal(10, 2)
+  analyticAccountId   String
+  analyticAccount     AnalyticAccount @relation(fields: [analyticAccountId], references: [id], onDelete: Restrict)
+  responsiblePersonId String
+  responsiblePerson   User            @relation(fields: [responsiblePersonId], references: [id], onDelete: Restrict)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([analyticAccountId])
+  @@index([responsiblePersonId])
+  @@map("budgets")
 }
 
 model PurchaseOrder {
@@ -325,3 +370,4 @@ model Payment {
   @@index([customerInvoiceId])
   @@map("payments")
 }
+

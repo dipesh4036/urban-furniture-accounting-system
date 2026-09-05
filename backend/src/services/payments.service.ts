@@ -51,7 +51,6 @@ export async function payVendorBill(billId: string, input: PayVendorBillInput) {
     return { payment, updatedBill };
   });
 }
-
 interface PayCustomerInvoiceInput {
   amount: number;
   method: string;

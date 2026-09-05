@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { RequiredMark } from "@/components/common/RequiredMark";
@@ -18,34 +18,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { useCreateAccount, useUpdateAccount } from "../hooks/useAccounts";
-import type { Account, AccountType } from "../services/accounts.service";
-import { accountFormSchema, accountTypes, type AccountFormValues } from "../validators/accounts.validator";
+import { useCreateAnalyticAccount } from "../hooks/useAnalyticAccounts";
+import {
+  analyticAccountFormSchema,
+  analyticTypes,
+  type AnalyticAccountFormValues,
+  type AnalyticTypeOption,
+} from "../validators/analytic-accounts.validator";
 
-const accountTypeLabels: Record<AccountType, string> = {
-  ASSET: "Asset",
-  LIABILITY: "Liability",
-  EXPENSE: "Expense",
+const analyticTypeLabels: Record<AnalyticTypeOption, string> = {
   INCOME: "Income",
-  CAPITAL: "Capital",
+  EXPENSE: "Expense",
 };
 
-interface AccountFormDialogProps {
-  // Pass an account to edit it. Leave it out to create a new one.
-  account?: Account;
-  // The element that opens the dialog when clicked (e.g. a <Button>).
-  // base-ui's DialogTrigger takes over this element's click behavior via
-  // its `render` prop instead of Radix's `asChild` pattern.
+interface AnalyticAccountFormDialogProps {
   trigger: React.ReactElement;
 }
 
-export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) {
+// No edit/archive here - plan.md Module 11 only defines create + list
+// for Analytic Accounts, so this dialog is create-only (unlike
+// AccountFormDialog, which also handles editing an existing Account).
+export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialogProps) {
   const [open, setOpen] = useState(false);
-  const isEditing = !!account;
-
-  const createAccount = useCreateAccount();
-  const updateAccount = useUpdateAccount();
-  const isSaving = createAccount.isPending || updateAccount.isPending;
+  const createAnalyticAccount = useCreateAnalyticAccount();
 
   const {
     control,
@@ -53,34 +48,19 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<AccountFormValues>({
-    resolver: zodResolver(accountFormSchema),
+  } = useForm<AnalyticAccountFormValues>({
+    resolver: zodResolver(analyticAccountFormSchema),
     // The Select must start with a defined value (empty string, not
     // undefined) or base-ui logs a "switching from uncontrolled to
-    // controlled" warning the moment a real type gets picked. "" isn't a
-    // valid AccountType, so it still fails Zod validation on submit until
-    // the user actually picks one - it's just a placeholder starting value.
-    defaultValues: { name: account?.name ?? "", type: account?.type ?? ("" as AccountType) },
+    // controlled" warning the moment a real type gets picked.
+    defaultValues: { name: "", type: "" as AnalyticTypeOption },
   });
 
-  // Reset the form back to this account's values (or blank, for create)
-  // every time the dialog opens - otherwise a previously edited account's
-  // leftover values could show up when creating a new one.
-  useEffect(() => {
-    if (open) {
-      reset({ name: account?.name ?? "", type: account?.type ?? ("" as AccountType) });
-    }
-  }, [open, account, reset]);
-
-  async function onSubmit(values: AccountFormValues) {
+  async function onSubmit(values: AnalyticAccountFormValues) {
     try {
-      if (isEditing) {
-        await updateAccount.mutateAsync({ id: account.id, input: values });
-        toast.success("Account updated");
-      } else {
-        await createAccount.mutateAsync(values);
-        toast.success("Account created");
-      }
+      await createAnalyticAccount.mutateAsync(values);
+      toast.success("Analytic account created");
+      reset({ name: "", type: "" as AnalyticTypeOption });
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
@@ -92,7 +72,7 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit account" : "New account"}</DialogTitle>
+          <DialogTitle>New Analytic Account</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -119,9 +99,9 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
                     <SelectValue placeholder="Select a type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accountTypes.map((type) => (
+                    {analyticTypes.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {accountTypeLabels[type]}
+                        {analyticTypeLabels[type]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -132,9 +112,9 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving && <Spinner />}
-              {isSaving ? "Saving..." : "Save"}
+            <Button type="submit" disabled={createAnalyticAccount.isPending}>
+              {createAnalyticAccount.isPending && <Spinner />}
+              {createAnalyticAccount.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </form>

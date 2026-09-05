@@ -39,6 +39,23 @@ api.interceptors.response.use(
     const backendMessage = error.response?.data?.message;
     const backendCode = error.response?.data?.code;
 
+    // A 401 means the session is no longer valid - not just "the token
+    // expired naturally", but also "an Admin deactivated this account
+    // just now" (see backend/src/middlewares/auth.middleware.ts, which
+    // re-checks isActive on every request). Either way, sitting on the
+    // current page with a dead session helps no one - send them to
+    // login. A hard reload (not router.push) so every cached query and
+    // piece of client state resets, not just the ones we remember to
+    // clear by hand.
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      const isAlreadyOnAuthPage =
+        window.location.pathname === "/login" || window.location.pathname === "/portal/login";
+      if (!isAlreadyOnAuthPage) {
+        const loginPath = window.location.pathname.startsWith("/portal") ? "/portal/login" : "/login";
+        window.location.assign(loginPath);
+      }
+    }
+
     const niceError = new Error(backendMessage ?? "Something went wrong. Please try again.");
     (niceError as Error & { code?: string }).code = backendCode ?? "UNKNOWN_ERROR";
 
