@@ -126,7 +126,7 @@ export async function generateInvoiceFromSalesOrder(
 ) {
   const so = await prisma.salesOrder.findUnique({
     where: { id: soId },
-    include: { items: true, customer: true },
+    include: { items: true, customer: true, invoice: true },
   });
   if (!so) {
     throw new AppError(404, "Sales order not found", "SALES_ORDER_NOT_FOUND");
