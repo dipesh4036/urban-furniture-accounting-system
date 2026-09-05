@@ -53,7 +53,12 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
     formState: { errors },
   } = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: { name: account?.name ?? "", type: account?.type },
+    // The Select must start with a defined value (empty string, not
+    // undefined) or base-ui logs a "switching from uncontrolled to
+    // controlled" warning the moment a real type gets picked. "" isn't a
+    // valid AccountType, so it still fails Zod validation on submit until
+    // the user actually picks one - it's just a placeholder starting value.
+    defaultValues: { name: account?.name ?? "", type: account?.type ?? ("" as AccountType) },
   });
 
   // Reset the form back to this account's values (or blank, for create)
@@ -61,7 +66,7 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
   // leftover values could show up when creating a new one.
   useEffect(() => {
     if (open) {
-      reset({ name: account?.name ?? "", type: account?.type });
+      reset({ name: account?.name ?? "", type: account?.type ?? ("" as AccountType) });
     }
   }, [open, account, reset]);
 
