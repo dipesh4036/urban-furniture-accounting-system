@@ -109,94 +109,96 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
           </span>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
-            <span>
-              Product
-              <RequiredMark />
-            </span>
-            <span>
-              Qty
-              <RequiredMark />
-            </span>
-            <span>
-              Unit Price ($)
-              <RequiredMark />
-            </span>
-            <span>
-              Tax ($)
-              <RequiredMark />
-            </span>
-            <span />
-          </div>
-
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[1fr_85px_110px_90px_40px] items-start gap-2">
-              <Controller
-                control={control}
-                name={`items.${index}.productId`}
-                render={({ field: productField }) => (
-                  <ProductCombobox
-                    value={productField.value}
-                    onChange={productField.onChange}
-                    invalid={!!errors.items?.[index]?.productId}
-                  />
-                )}
-              />
-
-              <Input
-                type="number"
-                step="1"
-                min="1"
-                placeholder="1"
-                aria-invalid={!!errors.items?.[index]?.quantity}
-                {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.unitPrice}
-                {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.tax}
-                {...register(`items.${index}.tax`, { valueAsNumber: true })}
-              />
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(index)}
-                disabled={fields.length <= 1}
-                aria-label="Remove line"
-              >
-                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-              </Button>
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-[580px] flex-col gap-2">
+            <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+              <span>
+                Product
+                <RequiredMark />
+              </span>
+              <span>
+                Qty
+                <RequiredMark />
+              </span>
+              <span>
+                Unit Price ($)
+                <RequiredMark />
+              </span>
+              <span>
+                Tax ($)
+                <RequiredMark />
+              </span>
+              <span />
             </div>
-          ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start mt-1"
-            onClick={() => append({ ...emptySalesOrderItem })}
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Add product line
-          </Button>
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-[1fr_85px_110px_90px_40px] items-start gap-2">
+                <Controller
+                  control={control}
+                  name={`items.${index}.productId`}
+                  render={({ field: productField }) => (
+                    <ProductCombobox
+                      value={productField.value}
+                      onChange={productField.onChange}
+                      invalid={!!errors.items?.[index]?.productId}
+                    />
+                  )}
+                />
 
-          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
-          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  placeholder="1"
+                  aria-invalid={!!errors.items?.[index]?.quantity}
+                  {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+                />
+
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.items?.[index]?.unitPrice}
+                  {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+                />
+
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.items?.[index]?.tax}
+                  {...register(`items.${index}.tax`, { valueAsNumber: true })}
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                  disabled={fields.length <= 1}
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start mt-1"
+              onClick={() => append({ ...emptySalesOrderItem })}
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Add product line
+            </Button>
+
+            {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
+            {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+          </div>
         </div>
       </div>
 

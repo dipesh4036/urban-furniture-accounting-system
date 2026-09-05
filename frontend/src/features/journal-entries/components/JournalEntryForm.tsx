@@ -147,81 +147,83 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
           </span>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-[1fr_130px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
-            <span>
-              Account
-              <RequiredMark />
-            </span>
-            <span>
-              Debit ($)
-              <RequiredMark />
-            </span>
-            <span>
-              Credit ($)
-              <RequiredMark />
-            </span>
-            <span />
-          </div>
-
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[1fr_130px_130px_40px] items-start gap-2">
-              <Controller
-                control={control}
-                name={`items.${index}.accountId`}
-                render={({ field: accountField }) => (
-                  <AccountCombobox
-                    value={accountField.value}
-                    onChange={accountField.onChange}
-                    invalid={!!errors.items?.[index]?.accountId}
-                  />
-                )}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.debit}
-                {...register(`items.${index}.debit`, { valueAsNumber: true })}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.credit}
-                {...register(`items.${index}.credit`, { valueAsNumber: true })}
-              />
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(index)}
-                disabled={fields.length <= 2}
-                aria-label="Remove line"
-              >
-                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-              </Button>
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-[540px] flex-col gap-2">
+            <div className="grid grid-cols-[1fr_130px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+              <span>
+                Account
+                <RequiredMark />
+              </span>
+              <span>
+                Debit ($)
+                <RequiredMark />
+              </span>
+              <span>
+                Credit ($)
+                <RequiredMark />
+              </span>
+              <span />
             </div>
-          ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start mt-1"
-            onClick={() => append({ ...emptyJournalItem })}
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Add line
-          </Button>
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-[1fr_130px_130px_40px] items-start gap-2">
+                <Controller
+                  control={control}
+                  name={`items.${index}.accountId`}
+                  render={({ field: accountField }) => (
+                    <AccountCombobox
+                      value={accountField.value}
+                      onChange={accountField.onChange}
+                      invalid={!!errors.items?.[index]?.accountId}
+                    />
+                  )}
+                />
 
-          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
-          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.items?.[index]?.debit}
+                  {...register(`items.${index}.debit`, { valueAsNumber: true })}
+                />
+
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.items?.[index]?.credit}
+                  {...register(`items.${index}.credit`, { valueAsNumber: true })}
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                  disabled={fields.length <= 2}
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start mt-1"
+              onClick={() => append({ ...emptyJournalItem })}
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Add line
+            </Button>
+
+            {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
+            {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+          </div>
         </div>
       </div>
 
