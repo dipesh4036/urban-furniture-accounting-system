@@ -2,14 +2,15 @@ import { z } from "zod";
 
 const contactTypeSchema = z.enum(["CUSTOMER", "VENDOR", "BOTH"]);
 
-// A profile image is either a normal URL (e.g. an uploaded file's link)
-// or a base64 data URI (e.g. "data:image/png;base64,..."). Anything else
-// is rejected.
+// A profile image is a path returned by POST /uploads (e.g.
+// "/uploads/<name>.jpg"), a full URL, or (kept for backwards
+// compatibility) a base64 data URI. Anything else is rejected.
 const profileImageSchema = z
   .string()
   .refine(
-    (value) => value.startsWith("data:image/") || z.string().url().safeParse(value).success,
-    "Profile image must be a valid URL or a base64 image"
+    (value) =>
+      value.startsWith("/uploads/") || value.startsWith("data:image/") || z.string().url().safeParse(value).success,
+    "Profile image must be a valid URL or uploaded file path"
   );
 
 // Simple phone number check: 10-15 digits, optional leading +. Good

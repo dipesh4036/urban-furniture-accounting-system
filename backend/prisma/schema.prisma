@@ -76,6 +76,8 @@ model Contact {
   city                    String
   state                   String
   pincode                 String
+  // Just a path/URL to an uploaded file (e.g. "/uploads/<name>.jpg"), not
+  // the image itself - see POST /uploads and profileImageSchema.
   profileImage            String?
   passwordHash            String?   // null until the Contact activates their account
   isActivated             Boolean   @default(false)

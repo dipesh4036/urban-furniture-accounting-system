@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
 import { useContacts, useUpdateContact } from "@/features/contacts/hooks/useContacts";
+import { toFileUrl } from "@/lib/api";
 
 export default function ContactsPage() {
   const { data, isLoading, isError, refetch } = useContacts();
@@ -70,6 +71,7 @@ export default function ContactsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12"></TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Email</TableHead>
@@ -80,6 +82,18 @@ export default function ContactsPage() {
           <TableBody>
             {data.contacts.map((contact) => (
               <TableRow key={contact.id}>
+                <TableCell>
+                  {contact.profileImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={toFileUrl(contact.profileImage)}
+                      alt=""
+                      className="size-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="size-8 rounded-full bg-muted" />
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{contact.name}</TableCell>
                 <TableCell>{contact.type}</TableCell>
                 <TableCell>{contact.email}</TableCell>

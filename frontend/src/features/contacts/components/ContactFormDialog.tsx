@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { uploadFile } from "@/features/uploads/services/uploads.service";
+import { toFileUrl } from "@/lib/api";
 import { useCreateContact, useUpdateContact } from "../hooks/useContacts";
 import type { Contact } from "../services/contacts.service";
 import { contactFormSchema, contactTypes, type ContactFormValues, type ContactTypeOption } from "../validators/contacts.validator";
@@ -50,6 +52,7 @@ function emptyValues(contact?: Contact): ContactFormValues {
 
 export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) {
   const [open, setOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const isEditing = !!contact;
 
   const createContact = useCreateContact();
@@ -82,15 +85,22 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
     }
   }, [open, contact, reset]);
 
-  // Reads the chosen file as a base64 data URI - that's the shape the
-  // backend's profileImageSchema accepts (see contacts.validator.ts).
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  // Uploads the chosen file to the backend (saved to disk there - see
+  // POST /uploads) and stores the path it comes back with. The image
+  // itself never touches the contact form's own request body.
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => setValue("profileImage", reader.result as string, { shouldValidate: true });
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const { url } = await uploadFile(file);
+      setValue("profileImage", url, { shouldValidate: true });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Image upload failed. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   async function onSubmit(values: ContactFormValues) {
@@ -120,15 +130,22 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
           <div className="flex items-center gap-4">
             {profileImage ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profileImage} alt="Profile preview" className="size-16 rounded-full object-cover" />
+              <img src={toFileUrl(profileImage)} alt="Profile preview" className="size-16 rounded-full object-cover" />
             ) : (
               <div className="flex size-16 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
-                No photo
+                {isUploading ? "..." : "No photo"}
               </div>
             )}
             <div className="flex flex-col gap-2">
               <Label htmlFor="profileImage">Profile Image</Label>
-              <Input id="profileImage" type="file" accept="image/*" onChange={handleFileChange} className="h-auto" />
+              <Input
+                id="profileImage"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="h-auto"
+              />
             </div>
           </div>
 
@@ -194,7 +211,7 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isUploading}>
               {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>

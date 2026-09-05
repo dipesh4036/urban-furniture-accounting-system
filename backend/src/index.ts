@@ -1,3 +1,4 @@
+import path from "path";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -16,11 +17,18 @@ app.use(helmet());
 // 2) Only allow our frontend's origin to call this API, and allow cookies
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 
-// 3) Parse JSON request bodies (req.body)
-app.use(express.json());
+// 3) Parse JSON request bodies (req.body). Default limit is only 100kb,
+// which a base64-encoded profile image (Contact Master) blows past
+// easily - raised to 5mb to give that room.
+app.use(express.json({ limit: "5mb" }));
 
 // 4) Parse cookies (req.cookies) - used for auth tokens later
 app.use(cookieParser());
+
+// Serve uploaded files (e.g. Contact profile images) as plain static
+// files. A contact's profileImage field just stores a path like
+// "/uploads/<name>.jpg", which resolves to a file here.
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // 5) Limit how many requests one IP can make, to slow down abuse
 const limiter = rateLimit({
