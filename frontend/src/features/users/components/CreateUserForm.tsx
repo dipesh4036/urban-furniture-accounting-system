@@ -33,7 +33,14 @@ export function CreateUserForm() {
     // controlled" warning the moment a role gets picked. "" isn't a
     // valid role, so it still fails Zod validation on submit until the
     // user actually picks one - it's just a placeholder starting value.
-    defaultValues: { role: "" as CreateUserFormValues["role"] },
+    defaultValues: {
+      name: "",
+      loginId: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "" as CreateUserFormValues["role"],
+    },
   });
 
   async function onSubmit(values: CreateUserFormValues) {
@@ -59,7 +66,7 @@ export function CreateUserForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 rounded-lg border p-6">
+    <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="flex flex-col gap-4 rounded-lg border p-6">
       <h2 className="text-sm font-semibold">Create User</h2>
 
       <div className="flex flex-col gap-2">
@@ -67,7 +74,7 @@ export function CreateUserForm() {
           Name
           <RequiredMark />
         </Label>
-        <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
+        <Input id="name" autoComplete="off" aria-invalid={!!errors.name} {...register("name")} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
 
@@ -76,7 +83,7 @@ export function CreateUserForm() {
           Login Id
           <RequiredMark />
         </Label>
-        <Input id="loginId" aria-invalid={!!errors.loginId} {...register("loginId")} />
+        <Input id="loginId" autoComplete="off" aria-invalid={!!errors.loginId} {...register("loginId")} />
         {errors.loginId && <p className="text-sm text-destructive">{errors.loginId.message}</p>}
       </div>
 
@@ -85,7 +92,7 @@ export function CreateUserForm() {
           Email
           <RequiredMark />
         </Label>
-        <Input id="email" type="email" aria-invalid={!!errors.email} {...register("email")} />
+        <Input id="email" type="email" autoComplete="off" aria-invalid={!!errors.email} {...register("email")} />
         {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
       </div>
 
@@ -117,7 +124,7 @@ export function CreateUserForm() {
             Password
             <RequiredMark />
           </Label>
-          <Input id="password" type="password" aria-invalid={!!errors.password} {...register("password")} />
+          <Input id="password" type="password" autoComplete="new-password" aria-invalid={!!errors.password} {...register("password")} />
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         </div>
 
@@ -129,6 +136,7 @@ export function CreateUserForm() {
           <Input
             id="confirmPassword"
             type="password"
+            autoComplete="new-password"
             aria-invalid={!!errors.confirmPassword}
             {...register("confirmPassword")}
           />
