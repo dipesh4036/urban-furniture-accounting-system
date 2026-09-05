@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, MoreVertical, Pencil, Plus, UserCheck, UserX } from "lucide-react";
+import { Eye, Mail, MoreVertical, Pencil, Plus, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
+import { ContactDetailsDialog } from "@/features/contacts/components/ContactDetailsDialog";
 import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
@@ -34,6 +35,7 @@ function getContactStatus(contact: { isActive: boolean; isActivated: boolean }):
 export default function ContactsPage() {
   const [view, setView] = useState<ViewMode>("list");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [viewingContact, setViewingContact] = useState<Contact | null>(null);
 
   const {
     searchInput,
@@ -118,6 +120,16 @@ export default function ContactsPage() {
           />
         </div>
       </div>
+
+      {/* Controlled View Contact Details Modal */}
+      <ContactDetailsDialog
+        contact={viewingContact}
+        open={!!viewingContact}
+        onOpenChange={(open) => {
+          if (!open) setViewingContact(null);
+        }}
+        onEdit={(contact) => setEditingContact(contact)}
+      />
 
       {/* Controlled Edit Contact Modal */}
       <ContactFormDialog
@@ -209,7 +221,7 @@ export default function ContactsPage() {
                         <TableHead className="min-w-[160px]">Email</TableHead>
                         <TableHead className="min-w-[120px]">Location</TableHead>
                         <TableHead className="w-[140px]">Status</TableHead>
-                        <TableHead className="w-[60px] text-right">Actions</TableHead>
+                        <TableHead className="w-[90px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -254,55 +266,72 @@ export default function ContactsPage() {
                             <StatusBadge status={getContactStatus(contact)} size="sm" />
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  >
-                                    <MoreVertical className="size-4" />
-                                    <span className="sr-only">Actions</span>
-                                  </Button>
-                                }
-                              />
-                              <DropdownMenuContent align="end" className="w-44">
-                                {!contact.isActivated && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleResendEmail(contact.id)}
-                                    disabled={resendEmail.isPending}
-                                  >
-                                    <Mail className="size-3.5 mr-2 text-muted-foreground" />
-                                    <span>Resend Link</span>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                onClick={() => setViewingContact(contact)}
+                                title="View Details"
+                              >
+                                <Eye className="size-4" />
+                                <span className="sr-only">View Details</span>
+                              </Button>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    >
+                                      <MoreVertical className="size-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  }
+                                />
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem onClick={() => setViewingContact(contact)}>
+                                    <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>View Details</span>
                                   </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => setEditingContact(contact)}>
-                                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
-                                  <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {contact.isActive ? (
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeactivate(contact.id)}
-                                    disabled={updateContact.isPending}
-                                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
-                                  >
-                                    <UserX className="size-3.5 mr-2" />
-                                    <span>Deactivate</span>
+                                  {!contact.isActivated && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleResendEmail(contact.id)}
+                                      disabled={resendEmail.isPending}
+                                    >
+                                      <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                                      <span>Resend Link</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                    <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>Edit</span>
                                   </DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem
-                                    onClick={() => handleActivate(contact.id)}
-                                    disabled={updateContact.isPending}
-                                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
-                                  >
-                                    <UserCheck className="size-3.5 mr-2" />
-                                    <span>Activate</span>
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  <DropdownMenuSeparator />
+                                  {contact.isActive ? (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeactivate(contact.id)}
+                                      disabled={updateContact.isPending}
+                                      className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                    >
+                                      <UserX className="size-3.5 mr-2" />
+                                      <span>Deactivate</span>
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => handleActivate(contact.id)}
+                                      disabled={updateContact.isPending}
+                                      className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                    >
+                                      <UserCheck className="size-3.5 mr-2" />
+                                      <span>Activate</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -347,55 +376,72 @@ export default function ContactsPage() {
                             </div>
                           </div>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                >
-                                  <MoreVertical className="size-4" />
-                                  <span className="sr-only">Actions</span>
-                                </Button>
-                              }
-                            />
-                            <DropdownMenuContent align="end" className="w-44">
-                              {!contact.isActivated && (
-                                <DropdownMenuItem
-                                  onClick={() => handleResendEmail(contact.id)}
-                                  disabled={resendEmail.isPending}
-                                >
-                                  <Mail className="size-3.5 mr-2 text-muted-foreground" />
-                                  <span>Resend Link</span>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                              onClick={() => setViewingContact(contact)}
+                              title="View Details"
+                            >
+                              <Eye className="size-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <MoreVertical className="size-4" />
+                                    <span className="sr-only">Actions</span>
+                                  </Button>
+                                }
+                              />
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem onClick={() => setViewingContact(contact)}>
+                                  <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>View Details</span>
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onClick={() => setEditingContact(contact)}>
-                                <Pencil className="size-3.5 mr-2 text-muted-foreground" />
-                                <span>Edit</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {contact.isActive ? (
-                                <DropdownMenuItem
-                                  onClick={() => handleDeactivate(contact.id)}
-                                  disabled={updateContact.isPending}
-                                  className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
-                                >
-                                  <UserX className="size-3.5 mr-2" />
-                                  <span>Deactivate</span>
+                                {!contact.isActivated && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleResendEmail(contact.id)}
+                                    disabled={resendEmail.isPending}
+                                  >
+                                    <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>Resend Link</span>
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>Edit</span>
                                 </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => handleActivate(contact.id)}
-                                  disabled={updateContact.isPending}
-                                  className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
-                                >
-                                  <UserCheck className="size-3.5 mr-2" />
-                                  <span>Activate</span>
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                <DropdownMenuSeparator />
+                                {contact.isActive ? (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeactivate(contact.id)}
+                                    disabled={updateContact.isPending}
+                                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                  >
+                                    <UserX className="size-3.5 mr-2" />
+                                    <span>Deactivate</span>
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => handleActivate(contact.id)}
+                                    disabled={updateContact.isPending}
+                                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                  >
+                                    <UserCheck className="size-3.5 mr-2" />
+                                    <span>Activate</span>
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </CardHeader>
                         <CardContent className="space-y-3 pb-4 text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
