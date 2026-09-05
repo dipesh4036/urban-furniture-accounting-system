@@ -4,9 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { RecordPaymentDialog } from "@/features/vendor-bills/components/RecordPaymentDialog";
 import { useVendorBills } from "@/features/vendor-bills/hooks/useVendorBills";
-import type { DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
+import { useDataTable } from "@/hooks/useDataTable";
+import type { VendorBill, DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
 
 function statusVariant(status: DocStatus): "default" | "secondary" | "outline" {
   if (status === "PAID") return "default";
@@ -17,11 +21,34 @@ function statusVariant(status: DocStatus): "default" | "secondary" | "outline" {
 export default function VendorBillsPage() {
   const { data, isLoading, isError, refetch } = useVendorBills();
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    currentPage,
+    pageSize,
+    setPage,
+    setPageSize,
+    totalItems,
+    totalPages,
+    paginatedData,
+    startIndex,
+    endIndex,
+  } = useDataTable<VendorBill>({
+    data: data?.vendorBills,
+    defaultPageSize: 10,
+    searchFields: ["billNumber", (b) => b.vendor.name, (b) => new Date(b.dueDate).toLocaleDateString()],
+    initialFilters: { status: "ALL" },
+  });
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Vendor Bills</h1>
-        <p className="text-sm text-muted-foreground">Bills to pay.</p>
+        <p className="text-sm text-muted-foreground">Bills to pay vendors.</p>
       </div>
 
       {isLoading && (
@@ -46,43 +73,86 @@ export default function VendorBillsPage() {
       )}
 
       {!isLoading && !isError && data && data.vendorBills.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bill Number</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount (₹)</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.vendorBills.map((bill) => (
-              <TableRow key={bill.id}>
-                <TableCell className="font-medium">{bill.billNumber}</TableCell>
-                <TableCell>{bill.vendor.name}</TableCell>
-                <TableCell>{new Date(bill.dueDate).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(bill.status)}>{bill.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">₹{Number(bill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right">
-                  {bill.status !== "PAID" && (
-                    <RecordPaymentDialog
-                      billId={bill.id}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Record Payment
-                        </Button>
-                      }
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search bill #, vendor, due date..."
+            filters={[
+              {
+                key: "status",
+                label: "All Statuses",
+                options: [
+                  { label: "All Statuses", value: "ALL" },
+                  { label: "Unpaid", value: "UNPAID" },
+                  { label: "Partially Paid", value: "PARTIALLY_PAID" },
+                  { label: "Paid", value: "PAID" },
+                ],
+              },
+            ]}
+            activeFilters={filters}
+            onFilterChange={setFilter}
+            isFiltered={isFiltered}
+            onResetFilters={resetFilters}
+            totalResults={totalItems}
+            unfilteredTotal={data.vendorBills.length}
+          />
+
+          {paginatedData.length === 0 ? (
+            <DataTableEmptyState onReset={resetFilters} />
+          ) : (
+            <div className="rounded-lg border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bill Number</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount (₹)</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((bill) => (
+                    <TableRow key={bill.id}>
+                      <TableCell className="font-medium">{bill.billNumber}</TableCell>
+                      <TableCell>{bill.vendor.name}</TableCell>
+                      <TableCell>{new Date(bill.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(bill.status)}>{bill.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">₹{Number(bill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right">
+                        {bill.status !== "PAID" && (
+                          <RecordPaymentDialog
+                            billId={bill.id}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                Record Payment
+                              </Button>
+                            }
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <DataTablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

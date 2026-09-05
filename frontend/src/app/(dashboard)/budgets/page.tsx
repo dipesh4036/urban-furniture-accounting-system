@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, PieChart as PieChartIcon, Plus, Search } from "lucide-react";
+import { ArrowLeft, PieChart as PieChartIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
+import { useDataTable } from "@/hooks/useDataTable";
 import { BudgetFormDialog } from "@/features/budgets/components/BudgetFormDialog";
 import { BudgetPieChart } from "@/features/budgets/components/BudgetPieChart";
 import { BudgetPieChartModal } from "@/features/budgets/components/BudgetPieChartModal";
@@ -81,7 +84,7 @@ function getAchievedAmount(budget: Budget): number {
   for (let i = 0; i < budget.id.length; i++) {
     hash = (hash * 31 + budget.id.charCodeAt(i)) % 1000;
   }
-  const ratio = 0.55 + (hash / 1000) * 0.22; // ~55% to 77% (reflecting user wireframe ~60% cyan)
+  const ratio = 0.55 + (hash / 1000) * 0.22; // ~55% to 77%
   return Math.round(planned * ratio * 100) / 100;
 }
 
@@ -89,27 +92,38 @@ export default function BudgetsPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useBudgets({ limit: 100 });
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedChartBudget, setSelectedChartBudget] = useState<Budget | null>(null);
   const [selectedFormBudget, setSelectedFormBudget] = useState<Budget | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Filter budgets based on search query
-  const filteredBudgets = useMemo(() => {
-    if (!data?.budgets) return [];
-    if (!searchQuery.trim()) return data.budgets;
+  const budgets = useMemo(() => data?.budgets ?? [], [data?.budgets]);
 
-    const query = searchQuery.toLowerCase();
-    return data.budgets.filter(
-      (b) =>
-        b.name.toLowerCase().includes(query) ||
-        b.period.toLowerCase().includes(query) ||
-        b.analyticAccount?.name.toLowerCase().includes(query) ||
-        b.responsiblePerson?.name.toLowerCase().includes(query) ||
-        "confirm".includes(query)
-    );
-  }, [data?.budgets, searchQuery]);
+  const {
+    paginatedData,
+    filteredData,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+  } = useDataTable<Budget>({
+    data: budgets,
+    searchFields: [
+      "name",
+      "period",
+      (b) => b.analyticAccount?.name ?? "",
+      (b) => b.responsiblePerson?.name ?? "",
+    ],
+    defaultPageSize: 10,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -139,12 +153,8 @@ export default function BudgetsPage() {
         </div>
 
         {/* View Toggle switcher matching Odoo standard (List vs Kanban) */}
-        <ViewToggle view={viewMode} onViewChange={setViewMode} />
-      </div>
-
-      {/* Wireframe Action Toolbar: [New] [Search Bar] [Back] */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
+          <ViewToggle view={viewMode} onViewChange={setViewMode} />
           <Button
             onClick={() => {
               setSelectedFormBudget(null);
@@ -155,30 +165,19 @@ export default function BudgetsPage() {
             <Plus className="size-4" />
             New
           </Button>
-
-          {/* Search Input matching wireframe */}
-          <div className="relative w-64 sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search budgets, periods, cost centers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-xs"
-            />
-          </div>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-1.5 text-xs text-muted-foreground"
-        >
-          <ArrowLeft className="size-3.5" />
-          Back
-        </Button>
       </div>
+
+      {/* Toolbar */}
+      <DataTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search budgets, periods, cost centers..."
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+        totalCount={budgets.length}
+        filteredCount={filteredData.length}
+      />
 
       {/* Loading state */}
       {isLoading && (
@@ -197,177 +196,200 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!isLoading && !isError && filteredBudgets.length === 0 && (
+      {/* Empty states */}
+      {!isLoading && !isError && budgets.length === 0 && (
         <div className="rounded-lg border border-dashed py-14 text-center">
           <PieChartIcon className="mx-auto size-8 text-muted-foreground/50 mb-3" />
           <p className="text-sm font-medium text-foreground">No budgets found</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {searchQuery ? "Try refining your search keyword." : "Click New above to create your first budget target."}
+            Click New above to create your first budget target.
           </p>
         </div>
       )}
 
-      {/* VIEW MODE 1: LIST VIEW (Shows Pie Chart column and row modal) */}
-      {!isLoading && !isError && filteredBudgets.length > 0 && viewMode === "list" && (
-        <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="w-[28%] font-semibold text-foreground">Budget</TableHead>
-                <TableHead className="w-[16%] font-semibold text-foreground">Start Date</TableHead>
-                <TableHead className="w-[16%] font-semibold text-foreground">End Date</TableHead>
-                <TableHead className="w-[14%] font-semibold text-foreground">Status</TableHead>
-                <TableHead className="w-[14%] text-right font-semibold text-foreground">Planned (₹)</TableHead>
-                <TableHead className="w-[12%] text-center font-semibold text-foreground">Pie Chart</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBudgets.map((budget) => {
-                const dates = getPeriodDates(budget.period, budget.createdAt);
-                const planned = Number(budget.plannedAmount);
-                const achieved = getAchievedAmount(budget);
+      {!isLoading && !isError && budgets.length > 0 && filteredData.length === 0 && (
+        <DataTableEmptyState
+          icon={PieChartIcon}
+          title="No matching budgets"
+          description="Try adjusting your search criteria to find what you're looking for."
+          onClear={resetFilters}
+        />
+      )}
 
-                return (
-                  <TableRow
-                    key={budget.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors group"
-                    onClick={() => {
-                      setSelectedFormBudget(budget);
-                      setIsFormOpen(true);
-                    }}
-                    title="Click row to open Form View"
-                  >
-                    {/* Budget Name */}
-                    <TableCell className="font-medium text-foreground group-hover:text-primary transition-colors">
-                      <div>
-                        <span>{budget.name}</span>
-                        <div className="text-[11px] text-muted-foreground font-normal">
-                          {budget.analyticAccount?.name} • {budget.responsiblePerson?.name}
-                        </div>
-                      </div>
-                    </TableCell>
+      {/* VIEW MODE 1: LIST VIEW */}
+      {!isLoading && !isError && paginatedData.length > 0 && viewMode === "list" && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/40">
+                <TableRow>
+                  <TableHead className="w-[28%] font-semibold text-foreground">Budget</TableHead>
+                  <TableHead className="w-[16%] font-semibold text-foreground">Start Date</TableHead>
+                  <TableHead className="w-[16%] font-semibold text-foreground">End Date</TableHead>
+                  <TableHead className="w-[14%] font-semibold text-foreground">Status</TableHead>
+                  <TableHead className="w-[14%] text-right font-semibold text-foreground">Planned (₹)</TableHead>
+                  <TableHead className="w-[12%] text-center font-semibold text-foreground">Pie Chart</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedData.map((budget) => {
+                  const dates = getPeriodDates(budget.period, budget.createdAt);
+                  const planned = Number(budget.plannedAmount);
+                  const achieved = getAchievedAmount(budget);
 
-                    {/* Start Date */}
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {dates.startDate}
-                    </TableCell>
-
-                    {/* End Date */}
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {dates.endDate}
-                    </TableCell>
-
-                    {/* Status ("Confirm" as requested in sketch) */}
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 text-[11px]"
-                      >
-                        Confirm
-                      </Badge>
-                    </TableCell>
-
-                    {/* Planned Amount */}
-                    <TableCell className="text-right font-medium">
-                      ₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-
-                    {/* Pie Chart Column with interactive thumbnail */}
-                    <TableCell
-                      className="text-center py-2"
-                      onClick={(e) => {
-                        e.stopPropagation(); // prevent row click
-                        setSelectedChartBudget(budget);
+                  return (
+                    <TableRow
+                      key={budget.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors group"
+                      onClick={() => {
+                        setSelectedFormBudget(budget);
+                        setIsFormOpen(true);
                       }}
-                      title="Click to view full Pie Chart (Achieved vs Balance)"
+                      title="Click row to open Form View"
                     >
-                      <div className="flex items-center justify-center">
-                        <div className="p-1 rounded-full hover:bg-sky-500/10 transition-colors cursor-pointer ring-1 ring-border group-hover:ring-sky-500/40">
-                          <BudgetPieChart
-                            plannedAmount={planned}
-                            achievedAmount={achieved}
-                            size="mini"
-                            showLabels={false}
-                            interactive={false}
-                          />
+                      {/* Budget Name */}
+                      <TableCell className="font-medium text-foreground group-hover:text-primary transition-colors">
+                        <div>
+                          <span>{budget.name}</span>
+                          <div className="text-[11px] text-muted-foreground font-normal">
+                            {budget.analyticAccount?.name} • {budget.responsiblePerson?.name}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
 
-          <div className="border-t bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
-            <span>Showing {filteredBudgets.length} budgets</span>
-            <span className="italic">💡 Tip: Click any row to Open Form View, or click the Pie Chart thumbnail for full breakdown.</span>
+                      {/* Start Date */}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {dates.startDate}
+                      </TableCell>
+
+                      {/* End Date */}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {dates.endDate}
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 text-[11px]"
+                        >
+                          Confirm
+                        </Badge>
+                      </TableCell>
+
+                      {/* Planned Amount */}
+                      <TableCell className="text-right font-medium">
+                        ₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+
+                      {/* Pie Chart Column */}
+                      <TableCell
+                        className="text-center py-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedChartBudget(budget);
+                        }}
+                        title="Click to view full Pie Chart (Achieved vs Balance)"
+                      >
+                        <div className="flex items-center justify-center">
+                          <div className="p-1 rounded-full hover:bg-sky-500/10 transition-colors cursor-pointer ring-1 ring-border group-hover:ring-sky-500/40">
+                            <BudgetPieChart
+                              plannedAmount={planned}
+                              achievedAmount={achieved}
+                              size="mini"
+                              showLabels={false}
+                              interactive={false}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
-      {/* VIEW MODE 2: KANBAN VIEW (Matching the user's wireframe photo with no chart clutter) */}
-      {!isLoading && !isError && filteredBudgets.length > 0 && viewMode === "kanban" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredBudgets.map((budget) => {
-            const dates = getPeriodDates(budget.period, budget.createdAt);
-            const planned = Number(budget.plannedAmount);
+      {/* VIEW MODE 2: KANBAN VIEW */}
+      {!isLoading && !isError && paginatedData.length > 0 && viewMode === "kanban" && (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {paginatedData.map((budget) => {
+              const dates = getPeriodDates(budget.period, budget.createdAt);
+              const planned = Number(budget.plannedAmount);
 
-            return (
-              <div
-                key={budget.id}
-                onClick={() => {
-                  setSelectedFormBudget(budget);
-                  setIsFormOpen(true);
-                }}
-                className="group relative cursor-pointer rounded-2xl border bg-card p-5 shadow-xs transition-all hover:border-primary/40 hover:shadow-md"
-                title="Click to open Form View"
-              >
-                {/* Header with Title and Status */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors">
-                      {budget.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {budget.analyticAccount?.name} • {budget.responsiblePerson?.name}
-                    </p>
+              return (
+                <div
+                  key={budget.id}
+                  onClick={() => {
+                    setSelectedFormBudget(budget);
+                    setIsFormOpen(true);
+                  }}
+                  className="group relative cursor-pointer rounded-2xl border bg-card p-5 shadow-xs transition-all hover:border-primary/40 hover:shadow-md"
+                  title="Click to open Form View"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors">
+                        {budget.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {budget.analyticAccount?.name} • {budget.responsiblePerson?.name}
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 text-[11px]"
+                    >
+                      Confirm
+                    </Badge>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 text-[11px]"
-                  >
-                    Confirm
-                  </Badge>
-                </div>
 
-                {/* Dates Section matching wireframe */}
-                <div className="mt-4 rounded-xl bg-muted/30 p-3.5 space-y-2 border border-border/50 font-mono text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Start Date:</span>
-                    <span className="font-semibold text-foreground">{dates.startDate}</span>
+                  <div className="mt-4 rounded-xl bg-muted/30 p-3.5 space-y-2 border border-border/50 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Start Date:</span>
+                      <span className="font-semibold text-foreground">{dates.startDate}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">End Date:</span>
+                      <span className="font-semibold text-foreground">{dates.endDate}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">End Date:</span>
-                    <span className="font-semibold text-foreground">{dates.endDate}</span>
-                  </div>
-                </div>
 
-                {/* Footer with Planned Target & Open Form View hint */}
-                <div className="mt-4 border-t pt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Planned: <strong className="text-foreground">₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</strong></span>
-                  <span className="text-[11px] font-medium text-primary group-hover:underline">
-                    Open Form View →
-                  </span>
+                  <div className="mt-4 border-t pt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Planned: <strong className="text-foreground">₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</strong></span>
+                    <span className="text-[11px] font-medium text-primary group-hover:underline">
+                      Open Form View →
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
-      {/* Enlarged Pie Chart Modal (matching user sketch with Achieved & Balance) */}
+      {/* Enlarged Pie Chart Modal */}
       <BudgetPieChartModal
         budget={selectedChartBudget}
         achievedAmount={selectedChartBudget ? getAchievedAmount(selectedChartBudget) : 0}
@@ -379,7 +401,7 @@ export default function BudgetsPage() {
         }}
       />
 
-      {/* Form View Dialog (Create or "Open Form View on Click") */}
+      {/* Form View Dialog */}
       <BudgetFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
@@ -388,3 +410,4 @@ export default function BudgetsPage() {
     </div>
   );
 }
+

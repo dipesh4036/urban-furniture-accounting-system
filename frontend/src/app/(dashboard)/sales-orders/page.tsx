@@ -6,9 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { GenerateInvoiceDialog } from "@/features/sales-orders/components/GenerateInvoiceDialog";
 import { SalesOrderFormDialog } from "@/features/sales-orders/components/SalesOrderFormDialog";
 import { useConfirmSalesOrder, useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
+import { useDataTable } from "@/hooks/useDataTable";
 import type { SalesOrder } from "@/features/sales-orders/services/sales-orders.service";
 
 function soTotal(so: SalesOrder): number {
@@ -25,6 +29,29 @@ export default function SalesOrdersPage() {
   const { data, isLoading, isError, refetch } = useSalesOrders();
   const confirmMutation = useConfirmSalesOrder();
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    currentPage,
+    pageSize,
+    setPage,
+    setPageSize,
+    totalItems,
+    totalPages,
+    paginatedData,
+    startIndex,
+    endIndex,
+  } = useDataTable<SalesOrder>({
+    data: data?.salesOrders,
+    defaultPageSize: 10,
+    searchFields: ["soNumber", (so) => so.customer.name, (so) => new Date(so.date).toLocaleDateString()],
+    initialFilters: { status: "ALL" },
+  });
+
   const handleConfirm = async (id: string, soNumber: string) => {
     try {
       await confirmMutation.mutateAsync(id);
@@ -36,16 +63,16 @@ export default function SalesOrdersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sales Orders</h1>
-          <p className="text-sm text-muted-foreground">Orders from customers.</p>
+          <p className="text-sm text-muted-foreground">Orders received from customers.</p>
         </div>
 
         <SalesOrderFormDialog
           trigger={
             <Button>
-              <Plus className="size-4" />
+              <Plus className="size-4 mr-1.5" />
               New Sales Order
             </Button>
           }
@@ -75,59 +102,101 @@ export default function SalesOrdersPage() {
       )}
 
       {!isLoading && !isError && data && data.salesOrders.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>SO Number</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total (₹)</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.salesOrders.map((so: SalesOrder) => (
-              <TableRow key={so.id}>
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search SO number, customer, date..."
+            filters={[
+              {
+                key: "status",
+                label: "All Statuses",
+                options: [
+                  { label: "All Statuses", value: "ALL" },
+                  { label: "Draft", value: "DRAFT" },
+                  { label: "Confirmed", value: "CONFIRMED" },
+                  { label: "Billed", value: "BILLED" },
+                  { label: "Cancelled", value: "CANCELLED" },
+                ],
+              },
+            ]}
+            activeFilters={filters}
+            onFilterChange={setFilter}
+            isFiltered={isFiltered}
+            onResetFilters={resetFilters}
+            totalResults={totalItems}
+            unfilteredTotal={data.salesOrders.length}
+          />
 
-                <TableCell className="font-medium">{so.soNumber}</TableCell>
-                <TableCell>{so.customer.name}</TableCell>
-                <TableCell>{new Date(so.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(so.status)}>{so.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">₹{soTotal(so).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {so.status === "DRAFT" && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={confirmMutation.isPending}
-                        onClick={() => handleConfirm(so.id, so.soNumber)}
-                      >
-                        <CheckCircle2 className="size-3.5 mr-1" />
-                        Confirm Order
-                      </Button>
-                    )}
-                    {so.status === "CONFIRMED" && (
-                      <GenerateInvoiceDialog
-                        salesOrderId={so.id}
-                        trigger={
-                          <Button variant="outline" size="sm">
-                            Generate Invoice
-                          </Button>
-                        }
-                      />
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          {paginatedData.length === 0 ? (
+            <DataTableEmptyState onReset={resetFilters} />
+          ) : (
+            <div className="rounded-lg border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>SO Number</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total (₹)</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((so: SalesOrder) => (
+                    <TableRow key={so.id}>
+                      <TableCell className="font-medium">{so.soNumber}</TableCell>
+                      <TableCell>{so.customer.name}</TableCell>
+                      <TableCell>{new Date(so.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(so.status)}>{so.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">₹{soTotal(so).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {so.status === "DRAFT" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              disabled={confirmMutation.isPending}
+                              onClick={() => handleConfirm(so.id, so.soNumber)}
+                            >
+                              <CheckCircle2 className="size-3.5 mr-1" />
+                              Confirm Order
+                            </Button>
+                          )}
+                          {so.status === "CONFIRMED" && (
+                            <GenerateInvoiceDialog
+                              salesOrderId={so.id}
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  Generate Invoice
+                                </Button>
+                              }
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <DataTablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
-

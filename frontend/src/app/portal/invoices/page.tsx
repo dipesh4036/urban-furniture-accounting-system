@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, FileText, Calendar, CreditCard, Receipt, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
+import { useDataTable } from "@/hooks/useDataTable";
 import { useCustomerInvoices } from "@/features/customer-invoices/hooks/useCustomerInvoices";
 import type { CustomerInvoice, DocStatus } from "@/features/customer-invoices/services/customer-invoices.service";
 import { PortalPayDialog } from "@/features/portal/components/PortalPayDialog";
@@ -44,7 +48,41 @@ export default function PortalInvoicesPage() {
   const { data, isLoading, isError, refetch } = useCustomerInvoices();
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
 
-  const invoices = data?.customerInvoices ?? [];
+  const rawInvoices = useMemo(() => data?.customerInvoices ?? [], [data?.customerInvoices]);
+
+  const {
+    paginatedData,
+    filteredData,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+  } = useDataTable<CustomerInvoice>({
+    data: rawInvoices,
+    searchFields: [
+      "invoiceNumber",
+      "status",
+      (inv) => inv.customer?.name ?? "",
+      (inv) => new Date(inv.invoiceDate).toLocaleDateString(),
+      (inv) => new Date(inv.dueDate).toLocaleDateString(),
+    ],
+    filterPredicate: (item, currentFilters) => {
+      const statusFilter = currentFilters.status;
+      if (statusFilter && statusFilter !== "ALL" && item.status !== statusFilter) {
+        return false;
+      }
+      return true;
+    },
+    defaultPageSize: 10,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,6 +94,31 @@ export default function PortalInvoicesPage() {
           </p>
         </div>
       </div>
+
+      {/* Toolbar */}
+      <DataTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search invoices by number, date..."
+        filterOptions={[
+          {
+            key: "status",
+            title: "Payment Status",
+            options: [
+              { label: "All Statuses", value: "ALL" },
+              { label: "Unpaid", value: "UNPAID" },
+              { label: "Partially Paid", value: "PARTIALLY_PAID" },
+              { label: "Paid", value: "PAID" },
+            ],
+          },
+        ]}
+        selectedFilters={filters}
+        onFilterChange={setFilter}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+        totalCount={rawInvoices.length}
+        filteredCount={filteredData.length}
+      />
 
       {/* State 1: Loading */}
       {isLoading && (
@@ -81,7 +144,7 @@ export default function PortalInvoicesPage() {
       )}
 
       {/* State 3: Empty */}
-      {!isLoading && !isError && invoices.length === 0 && (
+      {!isLoading && !isError && rawInvoices.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl border border-dashed border-border bg-card text-center">
           <div className="size-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
             <Receipt className="size-6" />
@@ -93,77 +156,98 @@ export default function PortalInvoicesPage() {
         </div>
       )}
 
-      {/* State 4: Success Table */}
-      {!isLoading && !isError && invoices.length > 0 && (
-        <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-[160px] font-semibold">Invoice #</TableHead>
-                  <TableHead className="font-semibold">Invoice Date</TableHead>
-                  <TableHead className="font-semibold">Due Date</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="text-right font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-right font-semibold">Balance Due</TableHead>
-                  <TableHead className="text-right font-semibold w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => {
-                  const total = Number(invoice.totalAmount);
-                  const paid = calculatePaidAmount(invoice);
-                  const balanceDue = Math.max(0, total - paid);
+      {/* Filtered Empty State */}
+      {!isLoading && !isError && rawInvoices.length > 0 && filteredData.length === 0 && (
+        <DataTableEmptyState
+          icon={Receipt}
+          title="No invoices match your criteria"
+          description="Try resetting your filters or adjusting your search term."
+          onClear={resetFilters}
+        />
+      )}
 
-                  return (
-                    <TableRow key={invoice.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium text-foreground">
-                        {invoice.invoiceNumber}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(invoice.invoiceDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(invoice.dueDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{statusBadge(invoice.status)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {balanceDue === 0 ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
-                        ) : (
-                          <span className="text-foreground">₹{balanceDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedInvoice(invoice)}
-                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            <Eye className="size-3.5" />
-                            View
-                          </Button>
-                          {invoice.status !== "PAID" && (
-                            <PortalPayDialog
-                              type="invoice"
-                              id={invoice.id}
-                              referenceNumber={invoice.invoiceNumber}
-                              balanceDue={balanceDue}
-                            />
+      {/* State 4: Success Table */}
+      {!isLoading && !isError && paginatedData.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-[160px] font-semibold">Invoice #</TableHead>
+                    <TableHead className="font-semibold">Invoice Date</TableHead>
+                    <TableHead className="font-semibold">Due Date</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="text-right font-semibold">Total Amount</TableHead>
+                    <TableHead className="text-right font-semibold">Balance Due</TableHead>
+                    <TableHead className="text-right font-semibold w-[120px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((invoice) => {
+                    const total = Number(invoice.totalAmount);
+                    const paid = calculatePaidAmount(invoice);
+                    const balanceDue = Math.max(0, total - paid);
+
+                    return (
+                      <TableRow key={invoice.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-medium text-foreground">
+                          {invoice.invoiceNumber}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(invoice.invoiceDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(invoice.dueDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{statusBadge(invoice.status)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {balanceDue === 0 ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
+                          ) : (
+                            <span className="text-foreground">₹{balanceDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedInvoice(invoice)}
+                              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              <Eye className="size-3.5" />
+                              View
+                            </Button>
+                            {invoice.status !== "PAID" && (
+                              <PortalPayDialog
+                                type="invoice"
+                                id={invoice.id}
+                                referenceNumber={invoice.invoiceNumber}
+                                balanceDue={balanceDue}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
@@ -320,3 +404,4 @@ export default function PortalInvoicesPage() {
     </div>
   );
 }
+

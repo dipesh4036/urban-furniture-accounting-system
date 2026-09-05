@@ -1,20 +1,61 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useMemo } from "react";
+import { BookOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
+import { useDataTable } from "@/hooks/useDataTable";
 import { AccountFormDialog } from "@/features/accounts/components/AccountFormDialog";
 import { useAccounts, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
+import type { Account, AccountType } from "@/features/accounts/services/accounts.service";
 
 export default function AccountsPage() {
   const { data, isLoading, isError, refetch } = useAccounts();
   const updateAccount = useUpdateAccount();
 
-  // Archiving is just PATCH /accounts/:id with { isActive: false } - there's
-  // no separate archive endpoint (see accounts.service.ts).
+  const rawAccounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
+
+  const {
+    paginatedData,
+    filteredData,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+  } = useDataTable<Account>({
+    data: rawAccounts,
+    searchFields: ["name", "type"],
+    filterPredicate: (item, currentFilters) => {
+      const typeFilter = currentFilters.type;
+      if (typeFilter && typeFilter !== "ALL" && item.type !== typeFilter) {
+        return false;
+      }
+      const statusFilter = currentFilters.status;
+      if (statusFilter && statusFilter !== "ALL") {
+        const itemStatus = item.isActive ? "ACTIVE" : "ARCHIVED";
+        if (itemStatus !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
+    },
+    defaultPageSize: 10,
+  });
+
   async function handleArchive(id: string) {
     try {
       await updateAccount.mutateAsync({ id, input: { isActive: false } });
@@ -42,6 +83,42 @@ export default function AccountsPage() {
         />
       </div>
 
+      {/* Toolbar */}
+      <DataTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search accounts by name or type..."
+        filterOptions={[
+          {
+            key: "type",
+            title: "Type",
+            options: [
+              { label: "All Types", value: "ALL" },
+              { label: "Asset", value: "ASSET" },
+              { label: "Liability", value: "LIABILITY" },
+              { label: "Equity", value: "EQUITY" },
+              { label: "Income", value: "INCOME" },
+              { label: "Expense", value: "EXPENSE" },
+            ],
+          },
+          {
+            key: "status",
+            title: "Status",
+            options: [
+              { label: "All Statuses", value: "ALL" },
+              { label: "Active", value: "ACTIVE" },
+              { label: "Archived", value: "ARCHIVED" },
+            ],
+          },
+        ]}
+        selectedFilters={filters}
+        onFilterChange={setFilter}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+        totalCount={rawAccounts.length}
+        filteredCount={filteredData.length}
+      />
+
       {isLoading && (
         <div className="flex justify-center py-12">
           <Spinner className="size-6" />
@@ -57,53 +134,83 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.accounts.length === 0 && (
+      {!isLoading && !isError && rawAccounts.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No accounts yet.</p>
           <AccountFormDialog trigger={<Button>Create your first account</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && data && data.accounts.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.accounts.map((account) => (
-              <TableRow key={account.id}>
-                <TableCell className="font-medium">{account.name}</TableCell>
-                <TableCell>{account.type}</TableCell>
-                <TableCell>
-                  <Badge variant={account.isActive ? "default" : "secondary"}>
-                    {account.isActive ? "Active" : "Archived"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <AccountFormDialog account={account} trigger={<Button variant="outline" size="sm">Edit</Button>} />
-                    {account.isActive && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleArchive(account.id)}
-                        disabled={updateAccount.isPending}
+      {!isLoading && !isError && rawAccounts.length > 0 && filteredData.length === 0 && (
+        <DataTableEmptyState
+          icon={BookOpen}
+          title="No accounts match your criteria"
+          description="Try resetting your filters or adjusting your search term."
+          onClear={resetFilters}
+        />
+      )}
+
+      {!isLoading && !isError && paginatedData.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedData.map((account) => (
+                  <TableRow key={account.id}>
+                    <TableCell className="font-medium">{account.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {account.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={account.isActive ? "outline" : "secondary"}
+                        className={account.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : ""}
                       >
-                        Archive
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                        {account.isActive ? "Active" : "Archived"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <AccountFormDialog account={account} trigger={<Button variant="outline" size="sm">Edit</Button>} />
+                        {account.isActive && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleArchive(account.id)}
+                            disabled={updateAccount.isPending}
+                          >
+                            Archive
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       )}
     </div>
   );
 }
+

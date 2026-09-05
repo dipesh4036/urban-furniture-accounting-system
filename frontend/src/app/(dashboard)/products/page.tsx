@@ -9,8 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ProductFormDialog } from "@/features/products/components/ProductFormDialog";
 import { useArchiveProduct, useProducts } from "@/features/products/hooks/useProducts";
+import { useDataTable } from "@/hooks/useDataTable";
+import type { Product } from "@/features/products/services/products.service";
 
 function formatPrice(value: string): string {
   return Number(value).toLocaleString("en-IN", {
@@ -23,6 +28,41 @@ export default function ProductsPage() {
   const [view, setView] = useState<ViewMode>("list");
   const { data, isLoading, isError, refetch } = useProducts();
   const archiveProduct = useArchiveProduct();
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    currentPage,
+    pageSize,
+    setPage,
+    setPageSize,
+    totalItems,
+    totalPages,
+    paginatedData,
+    startIndex,
+    endIndex,
+  } = useDataTable<Product>({
+    data: data?.products,
+    defaultPageSize: 10,
+    searchFields: ["name", "category", "type"],
+    initialFilters: { type: "ALL", status: "ALL" },
+    filterPredicate: (product, currentFilters) => {
+      // Filter by Type
+      if (currentFilters.type && currentFilters.type !== "ALL") {
+        if (product.type !== currentFilters.type) return false;
+      }
+      // Filter by Status
+      if (currentFilters.status && currentFilters.status !== "ALL") {
+        if (currentFilters.status === "ACTIVE" && !product.isActive) return false;
+        if (currentFilters.status === "ARCHIVED" && product.isActive) return false;
+      }
+      return true;
+    },
+  });
 
   async function handleArchive(id: string) {
     try {
@@ -79,120 +119,185 @@ export default function ProductsPage() {
       )}
 
       {!isLoading && !isError && data && data.products.length > 0 && (
-        <>
-          {view === "list" ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Sales Price (₹)</TableHead>
-                  <TableHead>Cost (₹)</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.type}</TableCell>
-                    <TableCell>₹{formatPrice(product.salesPrice)}</TableCell>
-                    <TableCell>₹{formatPrice(product.costPrice)}</TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.isActive ? "default" : "secondary"}>
-                        {product.isActive ? "Active" : "Archived"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <ProductFormDialog product={product} trigger={<Button variant="outline" size="sm">Edit</Button>} />
-                        {product.isActive && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleArchive(product.id)}
-                            disabled={archiveProduct.isPending}
-                          >
-                            Archive
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.products.map((product) => (
-                <Card key={product.id} className="flex flex-col justify-between transition-all hover:shadow-md">
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Package className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-[10px]">
-                            {product.type}
-                          </Badge>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {product.category}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pb-3 text-sm">
-                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2.5">
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground">Sales Price</p>
-                        <p className="font-semibold text-foreground">₹{formatPrice(product.salesPrice)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground">Cost Price</p>
-                        <p className="font-semibold text-muted-foreground">₹{formatPrice(product.costPrice)}</p>
-                      </div>
-                    </div>
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search product name, category..."
+            filters={[
+              {
+                key: "type",
+                label: "All Types",
+                options: [
+                  { label: "All Types", value: "ALL" },
+                  { label: "Storable", value: "STORABLE" },
+                  { label: "Service", value: "SERVICE" },
+                  { label: "Consumable", value: "CONSUMABLE" },
+                ],
+              },
+              {
+                key: "status",
+                label: "All Statuses",
+                options: [
+                  { label: "All Statuses", value: "ALL" },
+                  { label: "Active", value: "ACTIVE" },
+                  { label: "Archived", value: "ARCHIVED" },
+                ],
+              },
+            ]}
+            activeFilters={filters}
+            onFilterChange={setFilter}
+            isFiltered={isFiltered}
+            onResetFilters={resetFilters}
+            totalResults={totalItems}
+            unfilteredTotal={data.products.length}
+          />
 
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <Badge variant={product.isActive ? "default" : "secondary"}>
-                        {product.isActive ? "Active" : "Archived"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-end gap-2 border-t pt-3">
-                    <ProductFormDialog
-                      product={product}
-                      trigger={
-                        <Button variant="outline" size="sm" className="h-8 text-xs">
-                          Edit
-                        </Button>
-                      }
-                    />
-                    {product.isActive && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => handleArchive(product.id)}
-                        disabled={archiveProduct.isPending}
-                      >
-                        Archive
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+          {paginatedData.length === 0 ? (
+            <DataTableEmptyState onReset={resetFilters} />
+          ) : (
+            <>
+              {view === "list" ? (
+                <div className="rounded-lg border bg-card">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Sales Price (₹)</TableHead>
+                        <TableHead>Cost (₹)</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedData.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.type}</TableCell>
+                          <TableCell>₹{formatPrice(product.salesPrice)}</TableCell>
+                          <TableCell>₹{formatPrice(product.costPrice)}</TableCell>
+                          <TableCell>{product.category}</TableCell>
+                          <TableCell>
+                            <Badge variant={product.isActive ? "default" : "secondary"}>
+                              {product.isActive ? "Active" : "Archived"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <ProductFormDialog product={product} trigger={<Button variant="outline" size="sm">Edit</Button>} />
+                              {product.isActive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleArchive(product.id)}
+                                  disabled={archiveProduct.isPending}
+                                >
+                                  Archive
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {paginatedData.map((product) => (
+                      <Card key={product.id} className="flex flex-col justify-between transition-all hover:shadow-md">
+                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Package className="size-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {product.type}
+                                </Badge>
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {product.category}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3 pb-3 text-sm">
+                          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2.5">
+                            <div>
+                              <p className="text-[11px] font-medium text-muted-foreground">Sales Price</p>
+                              <p className="font-semibold text-foreground">₹{formatPrice(product.salesPrice)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-medium text-muted-foreground">Cost Price</p>
+                              <p className="font-semibold text-muted-foreground">₹{formatPrice(product.costPrice)}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 pt-1">
+                            <Badge variant={product.isActive ? "default" : "secondary"}>
+                              {product.isActive ? "Active" : "Archived"}
+                            </Badge>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="flex justify-end gap-2 border-t pt-3">
+                          <ProductFormDialog
+                            product={product}
+                            trigger={
+                              <Button variant="outline" size="sm" className="h-8 text-xs">
+                                Edit
+                              </Button>
+                            }
+                          />
+                          {product.isActive && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => handleArchive(product.id)}
+                              disabled={archiveProduct.isPending}
+                            >
+                              Archive
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                    className="border bg-card rounded-lg"
+                  />
+                </div>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
-

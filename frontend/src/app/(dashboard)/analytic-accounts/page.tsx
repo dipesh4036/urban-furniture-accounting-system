@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BarChart3, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
+import { useDataTable } from "@/hooks/useDataTable";
 import { AnalyticAccountFormDialog } from "@/features/analytic-accounts/components/AnalyticAccountFormDialog";
 import { useAnalyticAccounts } from "@/features/analytic-accounts/hooks/useAnalyticAccounts";
-import type { AnalyticType } from "@/features/analytic-accounts/services/analytic-accounts.service";
+import type { AnalyticAccount, AnalyticType } from "@/features/analytic-accounts/services/analytic-accounts.service";
 
 function typeVariant(type: AnalyticType): "default" | "secondary" {
   return type === "INCOME" ? "default" : "secondary";
@@ -20,8 +24,38 @@ export default function AnalyticAccountsPage() {
   const [view, setView] = useState<ViewMode>("list");
   const { data, isLoading, isError, refetch } = useAnalyticAccounts();
 
+  const rawAnalyticAccounts = useMemo(() => data?.analyticAccounts ?? [], [data?.analyticAccounts]);
+
+  const {
+    paginatedData,
+    filteredData,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+  } = useDataTable<AnalyticAccount>({
+    data: rawAnalyticAccounts,
+    searchFields: ["name", "type"],
+    filterPredicate: (item, currentFilters) => {
+      const typeFilter = currentFilters.type;
+      if (typeFilter && typeFilter !== "ALL" && item.type !== typeFilter) {
+        return false;
+      }
+      return true;
+    },
+    defaultPageSize: 10,
+  });
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Analytic Accounts</h1>
@@ -41,6 +75,30 @@ export default function AnalyticAccountsPage() {
         </div>
       </div>
 
+      {/* Toolbar */}
+      <DataTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search analytic accounts by name..."
+        filterOptions={[
+          {
+            key: "type",
+            title: "Type",
+            options: [
+              { label: "All Types", value: "ALL" },
+              { label: "Income", value: "INCOME" },
+              { label: "Expense", value: "EXPENSE" },
+            ],
+          },
+        ]}
+        selectedFilters={filters}
+        onFilterChange={setFilter}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+        totalCount={rawAnalyticAccounts.length}
+        filteredCount={filteredData.length}
+      />
+
       {isLoading && (
         <div className="flex justify-center py-12">
           <Spinner className="size-6" />
@@ -56,36 +114,47 @@ export default function AnalyticAccountsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.analyticAccounts.length === 0 && (
+      {!isLoading && !isError && rawAnalyticAccounts.length === 0 && (
         <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
           No analytic accounts yet. Create the first one above.
         </p>
       )}
 
-      {!isLoading && !isError && data && data.analyticAccounts.length > 0 && (
-        <>
+      {!isLoading && !isError && rawAnalyticAccounts.length > 0 && filteredData.length === 0 && (
+        <DataTableEmptyState
+          icon={BarChart3}
+          title="No analytic accounts match your criteria"
+          description="Try resetting your filters or adjusting your search term."
+          onClear={resetFilters}
+        />
+      )}
+
+      {!isLoading && !isError && paginatedData.length > 0 && (
+        <div className="flex flex-col gap-4">
           {view === "list" ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.analyticAccounts.map((analyticAccount) => (
-                  <TableRow key={analyticAccount.id}>
-                    <TableCell className="font-medium">{analyticAccount.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={typeVariant(analyticAccount.type)}>{analyticAccount.type}</Badge>
-                    </TableCell>
+            <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead>Name</TableHead>
+                    <TableHead className="text-right">Type</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((analyticAccount) => (
+                    <TableRow key={analyticAccount.id}>
+                      <TableCell className="font-medium">{analyticAccount.name}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={typeVariant(analyticAccount.type)}>{analyticAccount.type}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.analyticAccounts.map((analyticAccount) => (
+              {paginatedData.map((analyticAccount) => (
                 <Card key={analyticAccount.id} className="flex flex-col justify-between transition-all hover:shadow-md">
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-3">
@@ -115,9 +184,19 @@ export default function AnalyticAccountsPage() {
               ))}
             </div>
           )}
-        </>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       )}
     </div>
   );
 }
+
 

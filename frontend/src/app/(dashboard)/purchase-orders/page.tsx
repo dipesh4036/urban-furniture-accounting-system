@@ -6,9 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ConvertToBillDialog } from "@/features/purchase-orders/components/ConvertToBillDialog";
 import { PurchaseOrderFormDialog } from "@/features/purchase-orders/components/PurchaseOrderFormDialog";
 import { useConfirmPurchaseOrder, usePurchaseOrders } from "@/features/purchase-orders/hooks/usePurchaseOrders";
+import { useDataTable } from "@/hooks/useDataTable";
 import type { PurchaseOrder } from "@/features/purchase-orders/services/purchase-orders.service";
 
 function poTotal(po: PurchaseOrder): number {
@@ -25,6 +29,29 @@ export default function PurchaseOrdersPage() {
   const { data, isLoading, isError, refetch } = usePurchaseOrders();
   const confirmMutation = useConfirmPurchaseOrder();
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    currentPage,
+    pageSize,
+    setPage,
+    setPageSize,
+    totalItems,
+    totalPages,
+    paginatedData,
+    startIndex,
+    endIndex,
+  } = useDataTable<PurchaseOrder>({
+    data: data?.purchaseOrders,
+    defaultPageSize: 10,
+    searchFields: ["poNumber", (po) => po.vendor.name, (po) => new Date(po.date).toLocaleDateString()],
+    initialFilters: { status: "ALL" },
+  });
+
   const handleConfirm = async (id: string, poNumber: string) => {
     try {
       await confirmMutation.mutateAsync(id);
@@ -35,8 +62,8 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Purchase Orders</h1>
           <p className="text-sm text-muted-foreground">Orders placed with vendors.</p>
@@ -81,59 +108,101 @@ export default function PurchaseOrdersPage() {
       )}
 
       {!isLoading && !isError && data && data.purchaseOrders.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>PO Number</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total (₹)</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.purchaseOrders.map((po: PurchaseOrder) => (
-              <TableRow key={po.id}>
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search PO number, vendor, date..."
+            filters={[
+              {
+                key: "status",
+                label: "All Statuses",
+                options: [
+                  { label: "All Statuses", value: "ALL" },
+                  { label: "Draft", value: "DRAFT" },
+                  { label: "Confirmed", value: "CONFIRMED" },
+                  { label: "Billed", value: "BILLED" },
+                  { label: "Cancelled", value: "CANCELLED" },
+                ],
+              },
+            ]}
+            activeFilters={filters}
+            onFilterChange={setFilter}
+            isFiltered={isFiltered}
+            onResetFilters={resetFilters}
+            totalResults={totalItems}
+            unfilteredTotal={data.purchaseOrders.length}
+          />
 
-                <TableCell className="font-medium">{po.poNumber}</TableCell>
-                <TableCell>{po.vendor.name}</TableCell>
-                <TableCell>{new Date(po.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(po.status)}>{po.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">₹{poTotal(po).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {po.status === "DRAFT" && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={confirmMutation.isPending}
-                        onClick={() => handleConfirm(po.id, po.poNumber)}
-                      >
-                        <CheckCircle2 className="size-3.5 mr-1" />
-                        Confirm Order
-                      </Button>
-                    )}
-                    {po.status === "CONFIRMED" && (
-                      <ConvertToBillDialog
-                        purchaseOrderId={po.id}
-                        trigger={
-                          <Button variant="outline" size="sm">
-                            Convert to Bill
-                          </Button>
-                        }
-                      />
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          {paginatedData.length === 0 ? (
+            <DataTableEmptyState onReset={resetFilters} />
+          ) : (
+            <div className="rounded-lg border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PO Number</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total (₹)</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((po: PurchaseOrder) => (
+                    <TableRow key={po.id}>
+                      <TableCell className="font-medium">{po.poNumber}</TableCell>
+                      <TableCell>{po.vendor.name}</TableCell>
+                      <TableCell>{new Date(po.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(po.status)}>{po.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">₹{poTotal(po).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {po.status === "DRAFT" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              disabled={confirmMutation.isPending}
+                              onClick={() => handleConfirm(po.id, po.poNumber)}
+                            >
+                              <CheckCircle2 className="size-3.5 mr-1" />
+                              Confirm Order
+                            </Button>
+                          )}
+                          {po.status === "CONFIRMED" && (
+                            <ConvertToBillDialog
+                              purchaseOrderId={po.id}
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  Convert to Bill
+                                </Button>
+                              }
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <DataTablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
-
