@@ -14,3 +14,12 @@ export const updateAccountSchema = z.object({
   isActive: z.boolean().optional(),
 });
 export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
+
+// For GET /accounts?type=&page=&limit= - query params always arrive as
+// strings, so page/limit get coerced to numbers here.
+export const listAccountsQuerySchema = z.object({
+  type: accountTypeSchema.optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+});
+export type ListAccountsQuery = z.infer<typeof listAccountsQuerySchema>;
