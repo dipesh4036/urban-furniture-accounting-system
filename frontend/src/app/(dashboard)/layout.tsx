@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
@@ -86,9 +87,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const SidebarContent = () => (
     <>
       <div className="flex h-16 shrink-0 items-center px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 transition-opacity hover:opacity-90">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <span className="text-sm font-bold tracking-tighter">UF</span>
+        <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+          <div className="relative size-9 shrink-0 overflow-hidden rounded-lg border border-border/50 shadow-xs">
+            <Image
+              src="/logo.jpg"
+              alt="Urban Furniture Logo"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
           <span className="text-lg font-bold tracking-tight text-foreground">
             Urban<span className="font-medium text-muted-foreground">Furniture</span>
@@ -155,10 +162,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden supports-[backdrop-filter]:bg-background/60">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <span className="text-sm font-bold tracking-tighter">UF</span>
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="relative size-8 shrink-0 overflow-hidden rounded-lg border border-border/50 shadow-xs">
+            <Image
+              src="/logo.jpg"
+              alt="Urban Furniture Logo"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
+          <span className="text-base font-bold tracking-tight text-foreground">
+            Urban<span className="font-medium text-muted-foreground">Furniture</span>
+          </span>
         </Link>
         <button
           onClick={() => setIsMobileMenuOpen(true)}
