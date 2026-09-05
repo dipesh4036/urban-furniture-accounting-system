@@ -129,17 +129,45 @@ enum ProductType {
 // Products/services Urban Furniture buys or sells (Office Chair, Wooden
 // Table, ...). See plan.md Module 5.
 model Product {
-  id         String      @id @default(cuid())
-  name       String
-  type       ProductType
-  salesPrice Decimal     @db.Decimal(10, 2)
-  costPrice  Decimal     @db.Decimal(10, 2)
-  category   String
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id                   String                @id @default(cuid())
+  name                 String
+  type                 ProductType
+  salesPrice           Decimal               @db.Decimal(10, 2)
+  costPrice            Decimal               @db.Decimal(10, 2)
+  category             String
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  purchaseOrderItems   PurchaseOrderItem[]
+  salesOrderItems      SalesOrderItem[]
 
   @@map("products")
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  BILLED
+  CANCELLED
+}
+
+enum DocStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+enum PaymentType {
+  PAYMENT
+  REFUND
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CHEQUE
+  CASH
+  CARD
+  ONLINE
 }
 
 enum ContactType {
@@ -153,10 +181,10 @@ enum ContactType {
 // which triggers an activation email so the Contact can set their own
 // password and log in to the portal. See plan.md Module 6.
 model Contact {
-  id                       String      @id @default(cuid())
+  id                       String          @id @default(cuid())
   name                     String
   type                     ContactType
-  email                    String      @unique
+  email                    String          @unique
   mobile                   String
   city                     String
   state                    String
@@ -165,14 +193,18 @@ model Contact {
   // the image itself - see POST /uploads and profileImageSchema.
   profileImage             String?
   passwordHash             String? // null until the Contact activates their account
-  isActivated              Boolean     @default(false)
+  isActivated              Boolean         @default(false)
   activationToken          String?
   activationTokenExpiresAt DateTime?
   resetToken               String?
   resetTokenExpiresAt      DateTime?
-  isActive                 Boolean     @default(true)
-  createdAt                DateTime    @default(now())
-  updatedAt                DateTime    @updatedAt
+  isActive                 Boolean         @default(true)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  purchaseOrders           PurchaseOrder[]
+  vendorBills              VendorBill[]
+  salesOrders              SalesOrder[]
+  customerInvoices         CustomerInvoice[]
 
   @@index([type])
   @@map("contacts")
@@ -217,3 +249,124 @@ model Budget {
   @@index([responsiblePersonId])
   @@map("budgets")
 }
+
+model PurchaseOrder {
+  id        String              @id @default(cuid())
+  poNumber  String              @unique
+  vendorId  String
+  vendor    Contact             @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  date      DateTime
+  status    OrderStatus         @default(DRAFT)
+  items     PurchaseOrderItem[]
+  bill      VendorBill?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([vendorId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity        Int
+  unitPrice       Decimal       @db.Decimal(10, 2)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model VendorBill {
+  id              String        @id @default(cuid())
+  billNumber      String        @unique
+  purchaseOrderId String        @unique
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  vendorId        String
+  vendor          Contact       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  invoiceDate     DateTime
+  dueDate         DateTime
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  status          DocStatus     @default(UNPAID)
+  payments        Payment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+  @@map("vendor_bills")
+}
+
+model CustomerInvoice {
+  id            String      @id @default(cuid())
+  invoiceNumber String      @unique
+  salesOrderId  String      @unique
+  salesOrder    SalesOrder  @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+  customerId    String
+  customer      Contact     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceDate   DateTime
+  dueDate       DateTime
+  totalAmount   Decimal     @db.Decimal(10, 2)
+  status        DocStatus   @default(UNPAID)
+  emailSentAt   DateTime?
+  payments      Payment[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@map("customer_invoices")
+}
+
+model Payment {
+  id                String           @id @default(cuid())
+  type              PaymentType
+  method            PaymentMethod
+  amount            Decimal          @db.Decimal(10, 2)
+  date              DateTime
+  vendorBillId      String?
+  vendorBill        VendorBill?      @relation(fields: [vendorBillId], references: [id], onDelete: Restrict)
+  customerInvoiceId String?
+  customerInvoice   CustomerInvoice? @relation(fields: [customerInvoiceId], references: [id], onDelete: Restrict)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([vendorBillId])
+  @@index([customerInvoiceId])
+  @@map("payments")
+}
+
+model SalesOrder {
+  id        String           @id @default(cuid())
+  soNumber  String           @unique
+  customerId String
+  customer  Contact          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  date      DateTime
+  status    OrderStatus      @default(DRAFT)
+  items     SalesOrderItem[]
+  invoice   CustomerInvoice?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  tax          Decimal    @db.Decimal(10, 2) @default(0)
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
