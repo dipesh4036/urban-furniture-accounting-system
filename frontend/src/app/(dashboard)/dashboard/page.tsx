@@ -276,48 +276,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Center Main Greeting & Quick Actions */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div className="max-w-2xl">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">
-                {greeting}, {user?.name ?? "Finance Team"}
-              </h1>
-              <p className="mt-1.5 text-sm sm:text-base text-white/80 leading-relaxed max-w-xl">
-                Real-time financial control, sales fulfillment, vendor procurement, and double-entry accounting overview.
-              </p>
-            </div>
-
-            {/* Quick Executive CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Button
-                size="sm"
-                onClick={() => setIsSalesDialogOpen(true)}
-                className="gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-md px-4 py-2 text-xs sm:text-sm"
-              >
-                <Plus className="size-4" />
-                <span>New Sales Order</span>
-              </Button>
-
-              <Button
-                size="sm"
-                onClick={() => setIsPurchaseDialogOpen(true)}
-                className="gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-md px-4 py-2 text-xs sm:text-sm"
-              >
-                <Plus className="size-4" />
-                <span>New PO</span>
-              </Button>
-
-              <Link href="/reports/profit-loss">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border-white/25 backdrop-blur-md font-medium px-3.5 py-2 text-xs sm:text-sm"
-                >
-                  <BarChart3 className="size-4 text-amber-300" />
-                  <span>P&L Report</span>
-                </Button>
-              </Link>
-            </div>
+          {/* Center Main Greeting */}
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">
+              {greeting}, {user?.name ?? "Finance Team"}
+            </h1>
+            <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-2xl">
+              Real-time financial control, sales fulfillment, vendor procurement, and double-entry accounting overview.
+            </p>
           </div>
 
           {/* Bottom Live Snapshot Chips */}
@@ -604,16 +570,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href="/reports/budget-report">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 rounded-lg border-violet-500/30 text-violet-600 hover:bg-violet-500/10 hover:text-violet-700 shadow-2xs font-medium px-3 h-8 text-xs"
-                      >
-                        <BarChart3 className="size-3.5" />
-                        <span>Report</span>
-                      </Button>
-                    </Link>
                     <Button
                       size="sm"
                       onClick={() => setIsBudgetDialogOpen(true)}
