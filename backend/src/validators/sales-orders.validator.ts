@@ -19,3 +19,9 @@ export const listSalesOrdersQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
 });
 export type ListSalesOrdersQuery = z.infer<typeof listSalesOrdersQuerySchema>;
+
+export const generateInvoiceFromSalesOrderSchema = z.object({
+  invoiceDate: z.coerce.date(),
+  dueDate: z.coerce.date(),
+});
+export type GenerateInvoiceFromSalesOrderInput = z.infer<typeof generateInvoiceFromSalesOrderSchema>;

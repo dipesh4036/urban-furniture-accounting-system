@@ -34,3 +34,14 @@ export const getSalesOrderByIdController = asyncHandler(async (req: Request, res
     timestamp: new Date().toISOString(),
   });
 });
+
+export const generateInvoiceFromSalesOrderController = asyncHandler(async (req: Request, res: Response) => {
+  const invoice = await salesOrdersService.generateInvoiceFromSalesOrder(req.params.id, req.body);
+
+  res.status(201).json({
+    success: true,
+    message: "Invoice generated from sales order and email sent successfully",
+    data: { customerInvoice: invoice },
+    timestamp: new Date().toISOString(),
+  });
+});
