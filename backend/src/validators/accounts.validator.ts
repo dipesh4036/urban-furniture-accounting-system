@@ -19,6 +19,8 @@ export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
 // strings, so page/limit get coerced to numbers here.
 export const listAccountsQuerySchema = z.object({
   type: accountTypeSchema.optional(),
+  search: z.string().optional(),
+  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

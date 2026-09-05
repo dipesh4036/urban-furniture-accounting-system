@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { BarChart3, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,44 +11,43 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { AnalyticAccountFormDialog } from "@/features/analytic-accounts/components/AnalyticAccountFormDialog";
 import { useAnalyticAccounts } from "@/features/analytic-accounts/hooks/useAnalyticAccounts";
-import type { AnalyticAccount, AnalyticType } from "@/features/analytic-accounts/services/analytic-accounts.service";
+import type { AnalyticType } from "@/features/analytic-accounts/services/analytic-accounts.service";
 
 export default function AnalyticAccountsPage() {
   const [view, setView] = useState<ViewMode>("list");
-  const { data, isLoading, isError, refetch } = useAnalyticAccounts();
-
-  const rawAnalyticAccounts = useMemo(() => data?.analyticAccounts ?? [], [data?.analyticAccounts]);
 
   const {
-    paginatedData,
-    filteredData,
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
     resetFilters,
-    hasActiveFilters,
-    totalItems,
+    isFiltered,
     currentPage,
-    setCurrentPage,
+    setPage,
     pageSize,
     setPageSize,
-    totalPages,
-  } = useDataTable<AnalyticAccount>({
-    data: rawAnalyticAccounts,
-    searchFields: ["name", "type"],
-    filterPredicate: (item, currentFilters) => {
-      const typeFilter = currentFilters.type;
-      if (typeFilter && typeFilter !== "ALL" && item.type !== typeFilter) {
-        return false;
-      }
-      return true;
-    },
+  } = useServerDataTable({
     defaultPageSize: 10,
+    initialFilters: { type: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /analytic-accounts request.
+  const { data, isLoading, isError, refetch } = useAnalyticAccounts({
+    search: search || undefined,
+    type: filters.type === "ALL" ? undefined : (filters.type as AnalyticType),
+    page: currentPage,
+    limit: pageSize,
+  });
+
+  const paginatedData = data?.analyticAccounts ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,7 +72,7 @@ export default function AnalyticAccountsPage() {
 
       {/* Toolbar */}
       <DataTableToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search analytic accounts by name..."
         filterOptions={[
@@ -90,10 +88,10 @@ export default function AnalyticAccountsPage() {
         ]}
         selectedFilters={filters}
         onFilterChange={setFilter}
-        hasActiveFilters={hasActiveFilters}
+        hasActiveFilters={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={rawAnalyticAccounts.length}
-        filteredCount={filteredData.length}
+        totalCount={totalItems}
+        filteredCount={totalItems}
       />
 
       {isLoading && (
@@ -111,13 +109,13 @@ export default function AnalyticAccountsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && rawAnalyticAccounts.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
           No analytic accounts yet. Create the first one above.
         </p>
       )}
 
-      {!isLoading && !isError && rawAnalyticAccounts.length > 0 && filteredData.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && isFiltered && (
         <DataTableEmptyState
           icon={BarChart3}
           title="No analytic accounts match your criteria"
@@ -154,7 +152,7 @@ export default function AnalyticAccountsPage() {
                 totalPages={totalPages}
                 pageSize={pageSize}
                 totalItems={totalItems}
-                onPageChange={setCurrentPage}
+                onPageChange={setPage}
                 onPageSizeChange={setPageSize}
               />
             </div>
@@ -194,7 +192,7 @@ export default function AnalyticAccountsPage() {
                 totalPages={totalPages}
                 pageSize={pageSize}
                 totalItems={totalItems}
-                onPageChange={setCurrentPage}
+                onPageChange={setPage}
                 onPageSizeChange={setPageSize}
               />
             </div>

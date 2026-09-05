@@ -48,6 +48,7 @@ export interface VendorBillListResult {
 
 export interface ListVendorBillsParams {
   status?: DocStatus;
+  search?: string;
   vendorId?: string;
   page?: number;
   limit?: number;

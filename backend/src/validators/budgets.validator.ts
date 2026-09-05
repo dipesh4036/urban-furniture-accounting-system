@@ -10,6 +10,7 @@ export const createBudgetSchema = z.object({
 export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 
 export const listBudgetsQuerySchema = z.object({
+  search: z.string().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

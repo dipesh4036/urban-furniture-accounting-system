@@ -13,19 +13,17 @@ import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ConvertToBillDialog } from "@/features/purchase-orders/components/ConvertToBillDialog";
 import { PurchaseOrderFormDialog } from "@/features/purchase-orders/components/PurchaseOrderFormDialog";
 import { useConfirmPurchaseOrder, usePurchaseOrders } from "@/features/purchase-orders/hooks/usePurchaseOrders";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { PurchaseOrder } from "@/features/purchase-orders/services/purchase-orders.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
+import type { OrderStatus, PurchaseOrder } from "@/features/purchase-orders/services/purchase-orders.service";
 
 function poTotal(po: PurchaseOrder): number {
   return po.items.reduce((sum, item) => sum + item.quantity * Number(item.unitPrice), 0);
 }
 
 export default function PurchaseOrdersPage() {
-  const { data, isLoading, isError, refetch } = usePurchaseOrders();
-  const confirmMutation = useConfirmPurchaseOrder();
-
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
@@ -35,17 +33,26 @@ export default function PurchaseOrdersPage() {
     pageSize,
     setPage,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<PurchaseOrder>({
-    data: data?.purchaseOrders,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["poNumber", (po) => po.vendor.name, (po) => new Date(po.date).toLocaleDateString()],
     initialFilters: { status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /purchase-orders request.
+  const { data, isLoading, isError, refetch } = usePurchaseOrders({
+    search: search || undefined,
+    status: filters.status === "ALL" ? undefined : (filters.status as OrderStatus),
+    page: currentPage,
+    limit: pageSize,
+  });
+  const confirmMutation = useConfirmPurchaseOrder();
+
+  const paginatedData = data?.purchaseOrders ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   const handleConfirm = async (id: string, poNumber: string) => {
     try {
@@ -88,7 +95,7 @@ export default function PurchaseOrdersPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.purchaseOrders.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No purchase orders yet.</p>
           <PurchaseOrderFormDialog
@@ -102,12 +109,12 @@ export default function PurchaseOrdersPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.purchaseOrders.length > 0 && (
+      {!isLoading && !isError && (totalItems > 0 || isFiltered) && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search PO number, vendor, date..."
+            searchPlaceholder="Search PO number or vendor..."
             filters={[
               {
                 key: "status",
@@ -126,7 +133,7 @@ export default function PurchaseOrdersPage() {
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.purchaseOrders.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

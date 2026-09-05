@@ -36,6 +36,8 @@ export interface SalesOrderListResult {
 }
 
 export interface ListSalesOrdersParams {
+  search?: string;
+  status?: OrderStatus;
   page?: number;
   limit?: number;
 }

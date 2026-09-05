@@ -26,6 +26,7 @@ export interface JournalListResult {
 }
 
 export interface ListJournalsParams {
+  search?: string;
   page?: number;
   limit?: number;
 }

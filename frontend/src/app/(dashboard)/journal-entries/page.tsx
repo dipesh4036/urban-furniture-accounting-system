@@ -9,8 +9,7 @@ import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { JournalEntryFormDialog } from "@/features/journal-entries/components/JournalEntryFormDialog";
 import { useJournalEntries } from "@/features/journal-entries/hooks/useJournalEntries";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { JournalEntry } from "@/features/journal-entries/services/journal-entries.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 
 function formatAmount(value: string | number): string {
   return Number(value).toLocaleString("en-IN", {
@@ -20,27 +19,22 @@ function formatAmount(value: string | number): string {
 }
 
 export default function JournalEntriesPage() {
-  const { data, isLoading, isError, refetch } = useJournalEntries();
+  const { searchInput, search, setSearchQuery, resetFilters, isFiltered, currentPage, pageSize, setPage, setPageSize } =
+    useServerDataTable({ defaultPageSize: 10 });
 
-  const {
-    searchQuery,
-    setSearchQuery,
-    resetFilters,
-    isFiltered,
-    currentPage,
-    pageSize,
-    setPage,
-    setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<JournalEntry>({
-    data: data?.entries,
-    defaultPageSize: 10,
-    searchFields: ["reference", (e) => new Date(e.date).toLocaleDateString(), (e) => e.items.map((i) => i.accountId).join(" ")],
+  // Server-side search/pagination - every keystroke (debounced) and page
+  // change triggers a fresh GET /journal-entries request.
+  const { data, isLoading, isError, refetch } = useJournalEntries({
+    search: search || undefined,
+    page: currentPage,
+    limit: pageSize,
   });
+
+  const paginatedData = data?.entries ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,23 +69,23 @@ export default function JournalEntriesPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.entries.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No journal entries yet.</p>
           <JournalEntryFormDialog trigger={<Button>Create your first entry</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && data && data.entries.length > 0 && (
+      {!isLoading && !isError && (totalItems > 0 || isFiltered) && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search reference, date, accounts..."
+            searchPlaceholder="Search by reference..."
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.entries.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

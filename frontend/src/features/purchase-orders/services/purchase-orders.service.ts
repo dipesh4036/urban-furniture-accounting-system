@@ -35,6 +35,8 @@ export interface PurchaseOrderListResult {
 }
 
 export interface ListPurchaseOrdersParams {
+  search?: string;
+  status?: OrderStatus;
   page?: number;
   limit?: number;
 }

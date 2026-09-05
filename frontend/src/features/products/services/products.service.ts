@@ -31,6 +31,8 @@ export interface ProductListResult {
 
 export interface ListProductsParams {
   search?: string;
+  type?: ProductType;
+  status?: "ACTIVE" | "ARCHIVED";
   page?: number;
   limit?: number;
 }

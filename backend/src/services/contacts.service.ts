@@ -66,6 +66,8 @@ export async function createContact(input: CreateContactInput) {
 
 interface ListContactsOptions {
   type?: ContactType;
+  search?: string;
+  status?: "ACTIVE" | "ARCHIVED" | "PENDING_ACTIVATION";
   page?: number;
   limit?: number;
 }
@@ -76,7 +78,31 @@ export async function listContacts(options: ListContactsOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
-  const where = options.type ? { type: options.type } : {};
+  const statusFilter =
+    options.status === "ACTIVE"
+      ? { isActive: true }
+      : options.status === "ARCHIVED"
+        ? { isActive: false }
+        : options.status === "PENDING_ACTIVATION"
+          ? { isActivated: false }
+          : {};
+
+  const where = {
+    ...(options.type ? { type: options.type } : {}),
+    ...statusFilter,
+    ...(options.search
+      ? {
+          OR: [
+            { name: { contains: options.search } },
+            { email: { contains: options.search } },
+            { mobile: { contains: options.search } },
+            { city: { contains: options.search } },
+            { state: { contains: options.search } },
+            { pincode: { contains: options.search } },
+          ],
+        }
+      : {}),
+  };
 
   const [contacts, total] = await prisma.$transaction([
     prisma.contact.findMany({

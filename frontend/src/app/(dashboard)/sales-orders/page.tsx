@@ -13,19 +13,17 @@ import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { GenerateInvoiceDialog } from "@/features/sales-orders/components/GenerateInvoiceDialog";
 import { SalesOrderFormDialog } from "@/features/sales-orders/components/SalesOrderFormDialog";
 import { useConfirmSalesOrder, useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { SalesOrder } from "@/features/sales-orders/services/sales-orders.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
+import type { OrderStatus, SalesOrder } from "@/features/sales-orders/services/sales-orders.service";
 
 function soTotal(so: SalesOrder): number {
   return so.items.reduce((sum, item) => sum + item.quantity * Number(item.unitPrice) + Number(item.tax), 0);
 }
 
 export default function SalesOrdersPage() {
-  const { data, isLoading, isError, refetch } = useSalesOrders();
-  const confirmMutation = useConfirmSalesOrder();
-
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
@@ -35,17 +33,26 @@ export default function SalesOrdersPage() {
     pageSize,
     setPage,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<SalesOrder>({
-    data: data?.salesOrders,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["soNumber", (so) => so.customer.name, (so) => new Date(so.date).toLocaleDateString()],
     initialFilters: { status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /sales-orders request.
+  const { data, isLoading, isError, refetch } = useSalesOrders({
+    search: search || undefined,
+    status: filters.status === "ALL" ? undefined : (filters.status as OrderStatus),
+    page: currentPage,
+    limit: pageSize,
+  });
+  const confirmMutation = useConfirmSalesOrder();
+
+  const paginatedData = data?.salesOrders ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   const handleConfirm = async (id: string, soNumber: string) => {
     try {
@@ -89,19 +96,19 @@ export default function SalesOrdersPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.salesOrders.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No sales orders yet.</p>
           <SalesOrderFormDialog trigger={<Button>Create your first sales order</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && data && data.salesOrders.length > 0 && (
+      {!isLoading && !isError && (totalItems > 0 || isFiltered) && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search SO number, customer, date..."
+            searchPlaceholder="Search SO number or customer..."
             filters={[
               {
                 key: "status",
@@ -120,7 +127,7 @@ export default function SalesOrdersPage() {
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.salesOrders.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

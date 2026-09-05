@@ -46,24 +46,44 @@ export async function createStaffUser(input: CreateUserInput) {
 }
 
 interface ListStaffUsersOptions {
+  search?: string;
+  role?: "ADMIN" | "ACCOUNTANT";
+  status?: "ACTIVE" | "INACTIVE";
   page?: number;
   limit?: number;
 }
 
 // Same pagination shape as accounts.service.ts's listAccounts - capped
-// at 100 per page per backend-express SKILL.md.
+// at 100 per page per backend-express SKILL.md. `search` matches on
+// name, loginId, or email.
 export async function listStaffUsers(options: ListStaffUsersOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
+  const where = {
+    ...(options.role ? { role: options.role } : {}),
+    ...(options.status === "ACTIVE" ? { isActive: true } : {}),
+    ...(options.status === "INACTIVE" ? { isActive: false } : {}),
+    ...(options.search
+      ? {
+          OR: [
+            { name: { contains: options.search } },
+            { loginId: { contains: options.search } },
+            { email: { contains: options.search } },
+          ],
+        }
+      : {}),
+  };
+
   const [users, total] = await prisma.$transaction([
     prisma.user.findMany({
+      where,
       select: safeUserSelect,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-    prisma.user.count(),
+    prisma.user.count({ where }),
   ]);
 
   return {

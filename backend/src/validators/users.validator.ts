@@ -39,6 +39,9 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 // so page/limit get coerced to numbers here (same pattern as
 // accounts.validator.ts's listAccountsQuerySchema).
 export const listUsersQuerySchema = z.object({
+  search: z.string().optional(),
+  role: z.enum(["ADMIN", "ACCOUNTANT"]).optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

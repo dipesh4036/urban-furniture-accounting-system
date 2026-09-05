@@ -40,6 +40,7 @@ export interface BudgetListResult {
 }
 
 export interface ListBudgetsParams {
+  search?: string;
   page?: number;
   limit?: number;
 }

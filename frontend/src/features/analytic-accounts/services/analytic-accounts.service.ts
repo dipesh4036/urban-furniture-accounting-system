@@ -25,6 +25,8 @@ export interface AnalyticAccountListResult {
 }
 
 export interface ListAnalyticAccountsParams {
+  search?: string;
+  type?: AnalyticType;
   page?: number;
   limit?: number;
 }

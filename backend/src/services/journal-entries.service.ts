@@ -50,6 +50,7 @@ export async function createJournalEntry(input: CreateJournalEntryInput) {
 
 interface ListJournalEntriesOptions {
   journalId?: string;
+  search?: string;
   from?: Date;
   to?: Date;
   page?: number;
@@ -57,7 +58,8 @@ interface ListJournalEntriesOptions {
 }
 
 // Same pagination shape as journals.service.ts's listJournals - capped
-// at 100 per page per backend-express SKILL.md.
+// at 100 per page per backend-express SKILL.md. `search` matches on
+// reference only.
 export async function listJournalEntries(options: ListJournalEntriesOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
@@ -65,6 +67,9 @@ export async function listJournalEntries(options: ListJournalEntriesOptions) {
   const where: Prisma.JournalEntryWhereInput = {};
   if (options.journalId) {
     where.journalId = options.journalId;
+  }
+  if (options.search) {
+    where.reference = { contains: options.search };
   }
   if (options.from || options.to) {
     where.date = {

@@ -72,6 +72,8 @@ export async function createPurchaseOrder(input: CreatePurchaseOrderInput) {
 }
 
 interface ListPurchaseOrdersOptions {
+  search?: string;
+  status?: OrderStatus;
   page?: number;
   limit?: number;
 }
@@ -80,14 +82,27 @@ export async function listPurchaseOrders(options: ListPurchaseOrdersOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
+  const where: Prisma.PurchaseOrderWhereInput = {
+    ...(options.status ? { status: options.status } : {}),
+    ...(options.search
+      ? {
+          OR: [
+            { poNumber: { contains: options.search } },
+            { vendor: { name: { contains: options.search } } },
+          ],
+        }
+      : {}),
+  };
+
   const [orders, total] = await prisma.$transaction([
     prisma.purchaseOrder.findMany({
+      where,
       include: { items: true, vendor: true },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { date: "desc" },
     }),
-    prisma.purchaseOrder.count(),
+    prisma.purchaseOrder.count({ where }),
   ]);
 
   return {
