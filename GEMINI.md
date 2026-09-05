@@ -1,6 +1,6 @@
 # Master System & Agent Guidelines — Urban Furniture Accounting System
 
-This repository follows a disciplined software engineering standard for building a production-ready, full-stack application (Next.js App Router, Express, MySQL, Prisma, TypeScript, and Tailwind CSS).
+This repository follows a disciplined software engineering standard for building a production-ready, full-stack application (Next.js App Router, Express, MySQL, Prisma, TypeScript, Tailwind CSS, shadcn/ui, and TanStack React Query).
 
 ---
 
@@ -15,7 +15,7 @@ All domain-specific runbooks and guidelines are structured as formal skills loca
 | **`tech-architecture`** | [SKILL.md](file:///.agents/skills/tech-architecture/SKILL.md) | Stack conventions, folder structure, system design | Always active / structure changes |
 | **`project-context`** | [SKILL.md](file:///.agents/skills/project-context/SKILL.md) | Urban Furniture Accounting specifications, glossary, entities, API & page surfaces | Always — single source of truth for WHAT to build |
 | **`backend-express`** | [SKILL.md](file:///.agents/skills/backend-express/SKILL.md) | Express, controllers, services, auth, error envelope, Zod validation | Any backend work |
-| **`frontend-nextjs`** | [SKILL.md](file:///.agents/skills/frontend-nextjs/SKILL.md) | App Router, data fetching, forms (RHF + Zod), Tailwind, accessibility | Any frontend work |
+| **`frontend-nextjs`** | [SKILL.md](file:///.agents/skills/frontend-nextjs/SKILL.md) | App Router, shadcn/ui, React Query, forms (RHF + Zod), Tailwind, accessibility | Any frontend work |
 | **`database-prisma`** | [SKILL.md](file:///.agents/skills/database-prisma/SKILL.md) | MySQL schema, relations, indexes, migrations, seeding, query rules | Any database / query work |
 | **`feature-workflow`** | [SKILL.md](file:///.agents/skills/feature-workflow/SKILL.md) | Contract-first development, build order, edge cases, definition of done | Every task execution |
 

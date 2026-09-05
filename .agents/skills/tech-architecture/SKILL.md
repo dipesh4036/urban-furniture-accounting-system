@@ -37,6 +37,12 @@ Language:
 Styling:
 - Tailwind CSS
 
+UI Components:
+- shadcn/ui (Radix UI + Tailwind CSS)
+
+Data Fetching & Server State:
+- TanStack React Query (@tanstack/react-query)
+
 Database:
 - MySQL (MAMP)
 
@@ -59,8 +65,9 @@ Charts:
 - Recharts (only if required)
 
 State:
-- React Context
-- Zustand (only if global state becomes necessary)
+- TanStack React Query (Server State)
+- React Context (UI State)
+- Zustand (only if complex client-only global state becomes necessary)
 
 Notifications:
 - Sonner

@@ -34,7 +34,7 @@ All architectural and coding runbooks are structured as formal skills in `.agent
 
 ## Stack & Architecture Conventions
 
-- **Frontend**: Next.js (App Router), TypeScript (Strict), Tailwind CSS, Lucide Icons, Sonner.
+- **Frontend**: Next.js (App Router), TypeScript (Strict), Tailwind CSS, shadcn/ui, TanStack React Query (@tanstack/react-query), Lucide Icons, Sonner.
 - **Backend**: Node.js, Express, TypeScript, Zod, Prisma ORM.
 - **Database**: MySQL (MAMP / local MySQL).
 - **Backend Lifecycle**: `route → middleware(auth) → middleware(validate) → controller → service → repository/prisma → DB`.
@@ -43,8 +43,9 @@ All architectural and coding runbooks are structured as formal skills in `.agent
 - **API Response Envelope**:
   - Success: `{ success: true, message: "...", data: {}, timestamp: "ISO" }`
   - Error: `{ success: false, message: "...", code: "ERROR_CODE", errors: {}, timestamp: "ISO" }`
+- **Data Fetching**: TanStack React Query (`useQuery`, `useMutation` with query invalidation). Handle 4 states: loading, error, empty, success.
 - **Forms**: React Hook Form + Zod resolver. Show field errors inline. Disable submit while pending.
-- **Components**: Prefer Server Components. Leaf `"use client"` only for state, handlers, or effects.
+- **Components**: shadcn/ui primitives in `components/ui/`, feature components composed in `features/`. Leaf `"use client"` only.
 
 ---
 
@@ -61,6 +62,7 @@ npx prisma studio     # Launch Prisma Studio
 npm run dev           # Start Next.js dev server
 npm run build         # Production build check
 npm run lint          # Run ESLint
+npx shadcn@latest add <component> # Add shadcn/ui component
 ```
 
 ---

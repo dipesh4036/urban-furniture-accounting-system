@@ -23,17 +23,18 @@ Runbooks and detailed guidelines for frontend work are available in [`skills/`](
 
 ```
 app/(route)/page.tsx      → Page composition only, no business logic or raw fetch
-features/x/components/    → Feature UI components
-features/x/hooks/         → Feature data fetching + state hooks
+features/x/components/    → Feature UI components (composed with shadcn primitives)
+features/x/hooks/         → React Query hooks (useQuery, useMutation)
 features/x/services/      → Feature typed API calls
 lib/api.ts                → Single axios/fetch instance with credentials
-components/ui/            → Reusable, dumb components (never import from features/)
+components/ui/            → shadcn/ui primitives (Button, Dialog, Input, Table, etc.)
 ```
 
+- **UI Primitives (shadcn/ui)**: Primitives live in `components/ui/`. Install with `npx shadcn@latest add <component>`. Do not fetch data inside `components/ui/`.
 - **Server vs Client**: Server Component by default. Add `"use client"` only for state, effects, event handlers, or animations. Push `"use client"` to the leaf component.
-- **Data Fetching States**: Handle all 4 branches explicitly: `loading`, `error`, `empty`, and `success`.
+- **Data Fetching (TanStack React Query)**: Use `useQuery` / `useMutation`. Invalidate cache on mutations. Explicitly handle all 4 branches: `isLoading`, `isError`, `empty` (`data?.length === 0`), and `isSuccess`.
 - **Forms**: React Hook Form + Zod resolver. Show field-level errors inline below inputs. Disable submit while pending.
-- **State Priority**: Local `useState` → URL search params (for filters, search, tabs) → Server data → Context. Never copy server data into global state.
+- **State Priority**: Local `useState` → URL search params (for filters, search, tabs) → React Query server state → Context. Never copy server data into global state.
 
 ---
 
@@ -50,7 +51,8 @@ components/ui/            → Reusable, dumb components (never import from featu
 ## Frontend Commands
 
 ```bash
-npm run dev               # Start Next.js dev server
-npm run build             # Run production build check
-npm run lint              # Check ESLint rules
+npm run dev                          # Start Next.js dev server
+npm run build                        # Run production build check
+npm run lint                         # Check ESLint rules
+npx shadcn@latest add <component>    # Add shadcn/ui component
 ```

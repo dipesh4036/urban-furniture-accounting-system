@@ -50,11 +50,18 @@ Never fetch the same data in both a server and a client component.
 
 ---
 
-# DATA FETCHING
-- Read-only page data → fetch in the Server Component.
-- Interactive/refetching data → client hook.
-- Every fetch state must be handled: `loading`, `error`, `empty`, `success`. Four branches, always.
-- Use `loading.tsx` and `error.tsx` in route folders instead of ad-hoc spinners where possible.
+# DATA FETCHING (TanStack React Query)
+- Use **TanStack React Query** (`@tanstack/react-query`) for all client-side data fetching, caching, and server state.
+- **Query Keys**: Standardized tuple format:
+  - Lists: `[feature, 'list', params]` e.g. `['invoices', 'list', { status, page }]`
+  - Details: `[feature, 'detail', id]` e.g. `['invoices', 'detail', invoiceId]`
+- **Mutations**: Wrap writes in `useMutation`. On success, invalidate related queries using `queryClient.invalidateQueries({ queryKey: [...] })`.
+- **4 States (Mandatory)**: Every query consumer must explicitly handle:
+  1. `isLoading` / `isPending`: Skeleton loader or disabled state
+  2. `isError`: User-friendly error message with retry button
+  3. `empty`: `data?.length === 0` shows a clean empty state with next action
+  4. `isSuccess`: Render the data
+- Read-only initial SSR page data → fetch in Server Component or prefetch via React Query `dehydrate`.
 
 ---
 
@@ -69,7 +76,7 @@ React Hook Form + Zod resolver. Always.
 ---
 
 # STATE
-Priority order: local `useState` → URL search params → server data → Context → Zustand.
+Priority order: local `useState` → URL search params → React Query server state → Context → Zustand.
 Filters, search, pagination, and tabs live in the URL, so the page is shareable and back works.
 Never copy server data into global state.
 
@@ -82,10 +89,14 @@ Props interfaces are named `XProps` and live next to the component.
 
 ---
 
-# COMPONENTS
-- Presentational components take props and render. No data fetching inside `components/ui/`.
-- Max ~200 lines. Beyond that, split.
-- No prop drilling deeper than 2 levels — restructure or use context.
+# COMPONENTS (shadcn/ui + Modular Features)
+- **UI Primitives (`components/ui/`)**: Use **shadcn/ui** primitives installed via `npx shadcn@latest add <component>`.
+  - Do not fetch data inside `components/ui/`.
+  - Keep shadcn primitives generic and reusable across the entire app.
+- **Feature Components (`features/<feature>/components/`)**:
+  - Assemble domain components by composing shadcn/ui primitives.
+  - Max ~200 lines. Beyond that, split into sub-components.
+- No prop drilling deeper than 2 levels — restructure, use composition, or use context.
 - Every list needs a stable `key` — never the array index for reorderable data.
 
 ---
