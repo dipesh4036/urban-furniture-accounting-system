@@ -18,8 +18,10 @@ export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 // Same password rule as backend/src/validators/auth.validator.ts's
 // passwordComplexity: at least 8 characters, one lowercase letter, one
-// uppercase letter, and one special character.
-const passwordComplexity = z
+// uppercase letter, and one special character. Exported so
+// users.validator.ts can reuse it for the Create User form's password
+// field, same as the backend does.
+export const passwordComplexity = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
