@@ -1,13 +1,15 @@
 import { z } from "zod";
 
 // Mirrors backend/src/validators/payments.validator.ts's
-// payCustomerInvoiceSchema. This backend only supports CASH/BANK (unlike
-// vendor-bill payments on other branches, which have a 5-option enum).
-export const paymentMethods = ["CASH", "BANK"] as const;
+// payCustomerInvoiceSchema - same 5-option enum as vendor-bill payments.
+export const paymentMethods = ["BANK_TRANSFER", "CHEQUE", "CASH", "CARD", "ONLINE"] as const;
 
 export const paymentMethodLabels: Record<(typeof paymentMethods)[number], string> = {
+  BANK_TRANSFER: "Bank Transfer",
+  CHEQUE: "Cheque",
   CASH: "Cash",
-  BANK: "Bank",
+  CARD: "Card",
+  ONLINE: "Online",
 };
 
 export const paymentFormSchema = z.object({
