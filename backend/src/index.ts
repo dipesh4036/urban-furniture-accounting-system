@@ -36,7 +36,7 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// 7) All feature routes will live under /api/v1 (empty router for now)
+// 7) All feature routes live under /api/v1
 app.use("/api/v1", apiRouter);
 
 // 8) No route matched above - send a clean 404
