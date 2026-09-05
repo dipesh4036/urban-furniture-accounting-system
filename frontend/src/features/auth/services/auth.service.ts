@@ -23,3 +23,18 @@ export function login(values: LoginFormValues) {
 export function me(): Promise<{ user: AuthUser }> {
   return api.get("/auth/me");
 }
+
+// Calls POST /auth/forgot-password. The backend always replies 200
+// whether or not the email has an account (so an attacker can't use
+// this to check which emails exist) - so this never really "fails"
+// except on a genuine network/server error.
+export function forgotPassword(email: string) {
+  return api.post("/auth/forgot-password", { email });
+}
+
+// Calls POST /auth/reset-password with the token from the email link
+// plus the new password. Rejects with a friendly error (via api.ts's
+// interceptor) if the token is invalid or expired.
+export function resetPassword(token: string, newPassword: string) {
+  return api.post("/auth/reset-password", { token, newPassword });
+}
