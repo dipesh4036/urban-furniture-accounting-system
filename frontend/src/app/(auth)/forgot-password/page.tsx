@@ -13,9 +13,10 @@ import { forgotPassword } from "@/features/auth/services/auth.service";
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/features/auth/validators/auth.validator";
 
 export default function ForgotPasswordPage() {
-  // Once the email is submitted, we swap the form out for a "check your
-  // email" message - the backend never tells us whether that email
-  // actually has an account, so we always show the same success state.
+  // Once the email is submitted successfully, we swap the form out for a
+  // "check your email" message. If the email has no account, the request
+  // throws instead (see the catch block below) and we never get here -
+  // the backend tells us directly rather than staying ambiguous.
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const {
@@ -40,8 +41,8 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-col gap-4 text-center">
         <h1 className="text-xl font-semibold tracking-tight">Check your email</h1>
         <p className="text-sm text-muted-foreground">
-          If an account exists for <span className="font-medium text-foreground">{submittedEmail}</span>, we&apos;ve
-          sent a link to reset your password.
+          We&apos;ve sent a link to reset your password to{" "}
+          <span className="font-medium text-foreground">{submittedEmail}</span>.
         </p>
         <Link href="/login" className="text-sm font-medium underline underline-offset-4">
           Back to sign in
