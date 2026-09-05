@@ -28,7 +28,14 @@ app.use(cookieParser());
 // Serve uploaded files (e.g. Contact profile images) as plain static
 // files. A contact's profileImage field just stores a path like
 // "/uploads/<name>.jpg", which resolves to a file here.
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use(
+  "/uploads",
+  (_req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.join(process.cwd(), "uploads"))
+);
 
 // 5) Limit how many requests one IP can make, to slow down abuse
 const limiter = rateLimit({
