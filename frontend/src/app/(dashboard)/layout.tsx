@@ -4,6 +4,7 @@ import Link from "next/link";
 // plan.md. Just static links for now - no active-link highlighting, no
 // role-based show/hide yet. That comes later once auth is wired up.
 const navItems = [
+  { label: "Dashboard", href: "/dashboard" },
   { label: "Contacts", href: "/contacts" },
   { label: "Products", href: "/products" },
   { label: "Chart of Accounts", href: "/accounts" },
