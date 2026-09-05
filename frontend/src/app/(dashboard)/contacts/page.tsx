@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
-import { useContacts, useUpdateContact } from "@/features/contacts/hooks/useContacts";
+import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
 import { toFileUrl } from "@/lib/api";
 
 export default function ContactsPage() {
   const { data, isLoading, isError, refetch } = useContacts();
   const updateContact = useUpdateContact();
+  const resendEmail = useResendActivationEmail();
 
   // Archiving is just PATCH /contacts/:id with { isActive: false } - there's
   // no separate archive endpoint (see contacts.service.ts).
@@ -22,6 +23,15 @@ export default function ContactsPage() {
       toast.success("Contact archived");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function handleResendEmail(id: string) {
+    try {
+      await resendEmail.mutateAsync(id);
+      toast.success("Activation email sent successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send activation email.");
     }
   }
 
@@ -107,6 +117,16 @@ export default function ContactsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
+                    {!contact.isActivated && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendEmail(contact.id)}
+                        disabled={resendEmail.isPending}
+                      >
+                        Resend Link
+                      </Button>
+                    )}
                     <ContactFormDialog contact={contact} trigger={<Button variant="outline" size="sm">Edit</Button>} />
                     {contact.isActive && (
                       <Button
