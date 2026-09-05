@@ -1,4 +1,7 @@
-import { Prisma } from "@prisma/client";
+// Imported from this exact path (not "@prisma/client") because that error
+// class is only generated onto the main "Prisma" namespace once the schema
+// has at least one model. This path always has it, schema or no schema.
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../utils/AppError";
@@ -43,7 +46,7 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
   }
 
   // 3) A known Prisma database error
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  if (err instanceof PrismaClientKnownRequestError) {
     // P2002 = "unique constraint failed" (e.g. email already exists)
     if (err.code === "P2002") {
       const duplicateField = (err.meta?.target as string[] | undefined)?.join(", ") ?? "field";
