@@ -14,7 +14,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 // Password rule from plan.md Module 0: at least 8 characters, with at
 // least one lowercase letter, one uppercase letter, and one special
 // character (not a letter/number).
-const passwordComplexity = z
+export const passwordComplexity = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
