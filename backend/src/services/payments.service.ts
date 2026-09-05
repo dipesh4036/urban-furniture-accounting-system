@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type PaymentMethod } from "@prisma/client";
 import { prisma } from "../config/db";
 import { AppError } from "../utils/AppError";
 
@@ -32,20 +32,15 @@ export async function payVendorBill(billId: string, input: PayVendorBillInput) {
   return prisma.$transaction(async (tx) => {
     const payment = await tx.payment.create({
       data: {
-        type: "PAYMENT",
-        method: input.method as Prisma.PaymentMethod,
+        type: "PAYMENT" as const,
+        method: input.method as PaymentMethod,
         amount: new Prisma.Decimal(input.amount),
         date: input.date,
         vendorBillId: billId,
       },
     });
 
-    let newStatus: Prisma.DocStatus;
-    if (proposedTotal >= totalAmount) {
-      newStatus = "PAID";
-    } else {
-      newStatus = "PARTIALLY_PAID";
-    }
+    const newStatus = proposedTotal >= totalAmount ? "PAID" : "PARTIALLY_PAID";
 
     const updatedBill = await tx.vendorBill.update({
       where: { id: billId },

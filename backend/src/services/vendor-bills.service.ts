@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type DocStatus } from "@prisma/client";
 import { prisma } from "../config/db";
 import { AppError } from "../utils/AppError";
 
@@ -15,7 +15,7 @@ export async function listVendorBills(options: ListVendorBillsOptions) {
 
   const where: Prisma.VendorBillWhereInput = {};
   if (options.status) {
-    where.status = options.status as Prisma.DocStatus;
+    where.status = options.status as DocStatus;
   }
   if (options.vendorId) {
     where.vendorId = options.vendorId;

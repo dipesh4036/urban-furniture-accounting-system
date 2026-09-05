@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type OrderStatus, type DocStatus } from "@prisma/client";
 import { prisma } from "../config/db";
 import { AppError } from "../utils/AppError";
 import type { CreatePurchaseOrderInput } from "../validators/purchase-orders.validator";
@@ -124,7 +124,7 @@ export async function convertPurchaseOrderToBill(
 ) {
   const po = await prisma.purchaseOrder.findUnique({
     where: { id: poId },
-    include: { items: true },
+    include: { items: true, bill: true },
   });
   if (!po) {
     throw new AppError(404, "Purchase order not found", "PURCHASE_ORDER_NOT_FOUND");
@@ -168,13 +168,13 @@ export async function convertPurchaseOrderToBill(
         invoiceDate: input.invoiceDate,
         dueDate: input.dueDate,
         totalAmount: new Prisma.Decimal(totalAmount),
-        status: "UNPAID",
+        status: "UNPAID" as DocStatus,
       },
     });
 
     await tx.purchaseOrder.update({
       where: { id: poId },
-      data: { status: "BILLED" },
+      data: { status: "BILLED" as OrderStatus },
     });
 
     return tx.vendorBill.findUniqueOrThrow({
