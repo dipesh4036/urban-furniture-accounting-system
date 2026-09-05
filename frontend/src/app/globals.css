@@ -11,6 +11,17 @@
   No custom spacing tokens needed - just don't use odd steps like p-3, p-5.
 */
 
+/*
+  Motion curves (taste-and-motion SKILL.md, Section 10.3). The browser's
+  built-in `ease`/`ease-out` are too weak to feel intentional - these two
+  named curves are what every entrance/exit and on-screen-move transition
+  in the app should reach for, instead of inventing a new curve per component.
+*/
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entering/exiting elements */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* moving/morphing on screen */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
