@@ -75,10 +75,10 @@ export default function AnalyticAccountsPage() {
         searchQuery={searchInput}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search analytic accounts by name..."
-        filterOptions={[
+        filters={[
           {
             key: "type",
-            title: "Type",
+            label: "All Types",
             options: [
               { label: "All Types", value: "ALL" },
               { label: "Income", value: "INCOME" },
@@ -86,12 +86,12 @@ export default function AnalyticAccountsPage() {
             ],
           },
         ]}
-        selectedFilters={filters}
+        activeFilters={filters}
         onFilterChange={setFilter}
-        hasActiveFilters={isFiltered}
+        isFiltered={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={totalItems}
-        filteredCount={totalItems}
+        totalResults={totalItems}
+        unfilteredTotal={totalItems}
       />
 
       {isLoading && (
@@ -120,26 +120,39 @@ export default function AnalyticAccountsPage() {
           icon={BarChart3}
           title="No analytic accounts match your criteria"
           description="Try resetting your filters or adjusting your search term."
-          onClear={resetFilters}
+          onReset={resetFilters}
         />
       )}
 
       {!isLoading && !isError && paginatedData.length > 0 && (
         <div className="flex flex-col gap-4">
           {view === "list" ? (
-            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
+            <div className="w-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Analytic Account Name</TableHead>
-                    <TableHead className="text-right">Type</TableHead>
+                    <TableHead className="w-[65%] min-w-[280px]">Analytic Account Name</TableHead>
+                    <TableHead className="w-[35%] min-w-[180px]">Type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedData.map((analyticAccount) => (
                     <TableRow key={analyticAccount.id}>
-                      <TableCell className="font-semibold text-foreground">{analyticAccount.name}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            {analyticAccount.type === "INCOME" ? (
+                              <TrendingUp className="size-4 text-emerald-600 dark:text-emerald-400" />
+                            ) : analyticAccount.type === "EXPENSE" ? (
+                              <TrendingDown className="size-4 text-rose-600 dark:text-rose-400" />
+                            ) : (
+                              <BarChart3 className="size-4 text-primary" />
+                            )}
+                          </div>
+                          <span className="font-semibold text-foreground">{analyticAccount.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <StatusBadge status={analyticAccount.type} showDot={false} size="sm" />
                       </TableCell>
                     </TableRow>
@@ -152,6 +165,8 @@ export default function AnalyticAccountsPage() {
                 totalPages={totalPages}
                 pageSize={pageSize}
                 totalItems={totalItems}
+                startIndex={paginatedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+                endIndex={Math.min(currentPage * pageSize, totalItems)}
                 onPageChange={setPage}
                 onPageSizeChange={setPageSize}
               />
@@ -192,6 +207,8 @@ export default function AnalyticAccountsPage() {
                 totalPages={totalPages}
                 pageSize={pageSize}
                 totalItems={totalItems}
+                startIndex={paginatedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+                endIndex={Math.min(currentPage * pageSize, totalItems)}
                 onPageChange={setPage}
                 onPageSizeChange={setPageSize}
               />
@@ -202,5 +219,3 @@ export default function AnalyticAccountsPage() {
     </div>
   );
 }
-
-
