@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
 import { BookMarked, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,49 +8,32 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { JournalFormDialog } from "@/features/journals/components/JournalFormDialog";
 import { useJournals } from "@/features/journals/hooks/useJournals";
-import type { Journal, JournalType } from "@/features/journals/services/journals.service";
 
 export default function JournalsPage() {
-  const { data, isLoading, isError, refetch } = useJournals();
   const { data: accountsData } = useAccounts({ limit: 100 });
 
   function accountNameFor(accountId: string): string {
     return accountsData?.accounts.find((account) => account.id === accountId)?.name ?? accountId;
   }
 
-  const rawJournals = useMemo(() => data?.journals ?? [], [data?.journals]);
+  const { searchInput, search, setSearchQuery, resetFilters, isFiltered, currentPage, setPage, pageSize, setPageSize } =
+    useServerDataTable({ defaultPageSize: 10 });
 
-  const {
-    paginatedData,
-    filteredData,
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilter,
-    resetFilters,
-    hasActiveFilters,
-    totalItems,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-  } = useDataTable<Journal>({
-    data: rawJournals,
-    searchFields: ["name", "type", (j) => accountNameFor(j.defaultAccountId)],
-    filterPredicate: (item, currentFilters) => {
-      const typeFilter = currentFilters.type;
-      if (typeFilter && typeFilter !== "ALL" && item.type !== typeFilter) {
-        return false;
-      }
-      return true;
-    },
-    defaultPageSize: 10,
+  // Server-side search/pagination - every keystroke (debounced) and page
+  // change triggers a fresh GET /journals request.
+  const { data, isLoading, isError, refetch } = useJournals({
+    search: search || undefined,
+    page: currentPage,
+    limit: pageSize,
   });
+
+  const paginatedData = data?.journals ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,29 +55,13 @@ export default function JournalsPage() {
 
       {/* Toolbar */}
       <DataTableToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search journals by name or default account..."
-        filterOptions={[
-          {
-            key: "type",
-            title: "Type",
-            options: [
-              { label: "All Types", value: "ALL" },
-              { label: "Sale", value: "SALE" },
-              { label: "Purchase", value: "PURCHASE" },
-              { label: "Cash", value: "CASH" },
-              { label: "Bank", value: "BANK" },
-              { label: "General", value: "GENERAL" },
-            ],
-          },
-        ]}
-        selectedFilters={filters}
-        onFilterChange={setFilter}
-        hasActiveFilters={hasActiveFilters}
+        searchPlaceholder="Search journals by name..."
+        hasActiveFilters={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={rawJournals.length}
-        filteredCount={filteredData.length}
+        totalCount={totalItems}
+        filteredCount={totalItems}
       />
 
       {isLoading && (
@@ -114,14 +79,14 @@ export default function JournalsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && rawJournals.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No journals yet.</p>
           <JournalFormDialog trigger={<Button>Create your first journal</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && rawJournals.length > 0 && filteredData.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && isFiltered && (
         <DataTableEmptyState
           icon={BookMarked}
           title="No journals match your criteria"
@@ -159,7 +124,7 @@ export default function JournalsPage() {
               totalPages={totalPages}
               pageSize={pageSize}
               totalItems={totalItems}
-              onPageChange={setCurrentPage}
+              onPageChange={setPage}
               onPageSizeChange={setPageSize}
             />
           </div>

@@ -11,14 +11,13 @@ import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { RecordPaymentDialog } from "@/features/customer-invoices/components/RecordPaymentDialog";
 import { useCustomerInvoices } from "@/features/customer-invoices/hooks/useCustomerInvoices";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { CustomerInvoice, DocStatus } from "@/features/customer-invoices/services/customer-invoices.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
+import type { DocStatus } from "@/features/customer-invoices/services/customer-invoices.service";
 
 export default function InvoicesPage() {
-  const { data, isLoading, isError, refetch } = useCustomerInvoices();
-
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
@@ -28,29 +27,25 @@ export default function InvoicesPage() {
     pageSize,
     setPage,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<CustomerInvoice>({
-    data: data?.customerInvoices,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["invoiceNumber", (inv) => inv.customer.name, (inv) => new Date(inv.dueDate).toLocaleDateString()],
-    initialFilters: { status: "ALL", emailSent: "ALL" },
-    filterPredicate: (invoice, currentFilters) => {
-      // Filter by Status
-      if (currentFilters.status && currentFilters.status !== "ALL") {
-        if (invoice.status !== currentFilters.status) return false;
-      }
-      // Filter by Email Sent
-      if (currentFilters.emailSent && currentFilters.emailSent !== "ALL") {
-        if (currentFilters.emailSent === "SENT" && !invoice.emailSentAt) return false;
-        if (currentFilters.emailSent === "NOT_SENT" && invoice.emailSentAt) return false;
-      }
-      return true;
-    },
+    initialFilters: { status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /customer-invoices request.
+  const { data, isLoading, isError, refetch } = useCustomerInvoices({
+    search: search || undefined,
+    status: filters.status === "ALL" ? undefined : (filters.status as DocStatus),
+    page: currentPage,
+    limit: pageSize,
+  });
+
+  const paginatedData = data?.customerInvoices ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,18 +69,18 @@ export default function InvoicesPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.customerInvoices.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
           No invoices yet. Generate one from a confirmed sales order on the Sales Orders page.
         </p>
       )}
 
-      {!isLoading && !isError && data && data.customerInvoices.length > 0 && (
+      {!isLoading && !isError && (totalItems > 0 || isFiltered) && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search invoice #, customer, due date..."
+            searchPlaceholder="Search invoice # or customer..."
             filters={[
               {
                 key: "status",
@@ -97,22 +92,13 @@ export default function InvoicesPage() {
                   { label: "Paid", value: "PAID" },
                 ],
               },
-              {
-                key: "emailSent",
-                label: "All Delivery",
-                options: [
-                  { label: "All Delivery", value: "ALL" },
-                  { label: "Email Sent", value: "SENT" },
-                  { label: "Not Sent", value: "NOT_SENT" },
-                ],
-              },
             ]}
             activeFilters={filters}
             onFilterChange={setFilter}
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.customerInvoices.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

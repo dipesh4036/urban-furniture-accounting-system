@@ -10,14 +10,13 @@ import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { RecordPaymentDialog } from "@/features/vendor-bills/components/RecordPaymentDialog";
 import { useVendorBills } from "@/features/vendor-bills/hooks/useVendorBills";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { VendorBill, DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
+import type { DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
 
 export default function VendorBillsPage() {
-  const { data, isLoading, isError, refetch } = useVendorBills();
-
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
@@ -27,17 +26,25 @@ export default function VendorBillsPage() {
     pageSize,
     setPage,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<VendorBill>({
-    data: data?.vendorBills,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["billNumber", (b) => b.vendor.name, (b) => new Date(b.dueDate).toLocaleDateString()],
     initialFilters: { status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /vendor-bills request.
+  const { data, isLoading, isError, refetch } = useVendorBills({
+    search: search || undefined,
+    status: filters.status === "ALL" ? undefined : (filters.status as DocStatus),
+    page: currentPage,
+    limit: pageSize,
+  });
+
+  const paginatedData = data?.vendorBills ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,18 +68,18 @@ export default function VendorBillsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.vendorBills.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
           No vendor bills yet. Convert a confirmed purchase order into one from the Purchase Orders page.
         </p>
       )}
 
-      {!isLoading && !isError && data && data.vendorBills.length > 0 && (
+      {!isLoading && !isError && (totalItems > 0 || isFiltered) && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search bill #, vendor, due date..."
+            searchPlaceholder="Search bill # or vendor..."
             filters={[
               {
                 key: "status",
@@ -90,7 +97,7 @@ export default function VendorBillsPage() {
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.vendorBills.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

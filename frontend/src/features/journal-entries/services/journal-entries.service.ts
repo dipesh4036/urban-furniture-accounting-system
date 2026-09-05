@@ -33,6 +33,7 @@ export interface JournalEntryListResult {
 
 export interface ListJournalEntriesParams {
   journalId?: string;
+  search?: string;
   from?: string;
   to?: string;
   page?: number;

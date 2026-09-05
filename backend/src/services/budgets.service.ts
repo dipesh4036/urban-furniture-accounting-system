@@ -58,18 +58,31 @@ export async function createBudget(input: CreateBudgetInput) {
 }
 
 interface ListBudgetsOptions {
+  search?: string;
   page?: number;
   limit?: number;
 }
 
 // Same pagination shape as journals.service.ts's listJournals - capped
-// at 100 per page per backend-express SKILL.md.
+// at 100 per page per backend-express SKILL.md. `search` matches on name,
+// period, or the linked analytic account's name.
 export async function listBudgets(options: ListBudgetsOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
+  const where: Prisma.BudgetWhereInput = options.search
+    ? {
+        OR: [
+          { name: { contains: options.search } },
+          { period: { contains: options.search } },
+          { analyticAccount: { name: { contains: options.search } } },
+        ],
+      }
+    : {};
+
   const [budgets, total] = await prisma.$transaction([
     prisma.budget.findMany({
+      where,
       include: {
         analyticAccount: true,
         responsiblePerson: { select: safeResponsiblePersonSelect },
@@ -78,7 +91,7 @@ export async function listBudgets(options: ListBudgetsOptions) {
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-    prisma.budget.count(),
+    prisma.budget.count({ where }),
   ]);
 
   return {

@@ -443,7 +443,7 @@ async function main() {
     const isVendorPayment = i % 2 === 0;
     const pDate = new Date(2026, 2, (i % 25) + 1);
     const amount = new Prisma.Decimal((500 + i * 75).toFixed(2));
-    const method: PaymentMethod = i % 3 === 0 ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER;
+    const method: PaymentMethod = i % 3 === 0 ? PaymentMethod.CASH : PaymentMethod.BANK;
 
     if (isVendorPayment && vendorBillsCreated.length > 0) {
       const bill = vendorBillsCreated[(i - 1) % vendorBillsCreated.length];

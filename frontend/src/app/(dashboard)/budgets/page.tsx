@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft, PieChart as PieChartIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { BudgetFormDialog } from "@/features/budgets/components/BudgetFormDialog";
 import { BudgetPieChart } from "@/features/budgets/components/BudgetPieChart";
 import { BudgetPieChartModal } from "@/features/budgets/components/BudgetPieChartModal";
@@ -90,40 +90,26 @@ function getAchievedAmount(budget: Budget): number {
 
 export default function BudgetsPage() {
   const router = useRouter();
-  const { data, isLoading, isError, refetch } = useBudgets({ limit: 100 });
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedChartBudget, setSelectedChartBudget] = useState<Budget | null>(null);
   const [selectedFormBudget, setSelectedFormBudget] = useState<Budget | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const budgets = useMemo(() => data?.budgets ?? [], [data?.budgets]);
+  const { searchInput, search, setSearchQuery, resetFilters, isFiltered, currentPage, setPage, pageSize, setPageSize } =
+    useServerDataTable({ defaultPageSize: 10 });
 
-  const {
-    paginatedData,
-    filteredData,
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilter,
-    resetFilters,
-    hasActiveFilters,
-    totalItems,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-  } = useDataTable<Budget>({
-    data: budgets,
-    searchFields: [
-      "name",
-      "period",
-      (b) => b.analyticAccount?.name ?? "",
-      (b) => b.responsiblePerson?.name ?? "",
-    ],
-    defaultPageSize: 10,
+  // Server-side search/pagination - every keystroke (debounced) and page
+  // change triggers a fresh GET /budgets request.
+  const { data, isLoading, isError, refetch } = useBudgets({
+    search: search || undefined,
+    page: currentPage,
+    limit: pageSize,
   });
+
+  const paginatedData = data?.budgets ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,13 +156,13 @@ export default function BudgetsPage() {
 
       {/* Toolbar */}
       <DataTableToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search budgets, periods, cost centers..."
-        hasActiveFilters={hasActiveFilters}
+        hasActiveFilters={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={budgets.length}
-        filteredCount={filteredData.length}
+        totalCount={totalItems}
+        filteredCount={totalItems}
       />
 
       {/* Loading state */}
@@ -197,7 +183,7 @@ export default function BudgetsPage() {
       )}
 
       {/* Empty states */}
-      {!isLoading && !isError && budgets.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="rounded-lg border border-dashed py-14 text-center">
           <PieChartIcon className="mx-auto size-8 text-muted-foreground/50 mb-3" />
           <p className="text-sm font-medium text-foreground">No budgets found</p>
@@ -207,7 +193,7 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && budgets.length > 0 && filteredData.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && isFiltered && (
         <DataTableEmptyState
           icon={PieChartIcon}
           title="No matching budgets"
@@ -314,7 +300,7 @@ export default function BudgetsPage() {
               totalPages={totalPages}
               pageSize={pageSize}
               totalItems={totalItems}
-              onPageChange={setCurrentPage}
+              onPageChange={setPage}
               onPageSizeChange={setPageSize}
             />
           </div>
@@ -383,7 +369,7 @@ export default function BudgetsPage() {
             totalPages={totalPages}
             pageSize={pageSize}
             totalItems={totalItems}
-            onPageChange={setCurrentPage}
+            onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
         </div>

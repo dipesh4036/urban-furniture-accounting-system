@@ -19,24 +19,27 @@ export async function createJournal(input: CreateJournalInput) {
 }
 
 interface ListJournalsOptions {
+  search?: string;
   page?: number;
   limit?: number;
 }
 
 // Same pagination shape as accounts.service.ts's listAccounts - capped
-// at 100 per page per backend-express SKILL.md. No filter by type here -
-// plan.md Module 7 only lists create and list for Journals, no filter.
+// at 100 per page per backend-express SKILL.md. `search` matches on name only.
 export async function listJournals(options: ListJournalsOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
+  const where = options.search ? { name: { contains: options.search } } : {};
+
   const [journals, total] = await prisma.$transaction([
     prisma.journal.findMany({
+      where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-    prisma.journal.count(),
+    prisma.journal.count({ where }),
   ]);
 
   return {

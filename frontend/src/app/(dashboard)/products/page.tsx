@@ -15,8 +15,8 @@ import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ProductFormDialog } from "@/features/products/components/ProductFormDialog";
 import { useArchiveProduct, useProducts } from "@/features/products/hooks/useProducts";
-import { useDataTable } from "@/hooks/useDataTable";
-import type { Product } from "@/features/products/services/products.service";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
+import type { ProductType } from "@/features/products/services/products.service";
 
 function formatPrice(value: string): string {
   return Number(value).toLocaleString("en-IN", {
@@ -27,11 +27,10 @@ function formatPrice(value: string): string {
 
 export default function ProductsPage() {
   const [view, setView] = useState<ViewMode>("list");
-  const { data, isLoading, isError, refetch } = useProducts();
-  const archiveProduct = useArchiveProduct();
 
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
@@ -41,27 +40,27 @@ export default function ProductsPage() {
     pageSize,
     setPage,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<Product>({
-    data: data?.products,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["name", "category", "type"],
     initialFilters: { type: "ALL", status: "ALL" },
-    filterPredicate: (item: Product, activeFilters: Record<string, string>) => {
-      if (activeFilters.type && activeFilters.type !== "ALL" && item.type !== activeFilters.type) {
-        return false;
-      }
-      if (activeFilters.status && activeFilters.status !== "ALL") {
-        if (activeFilters.status === "ACTIVE" && !item.isActive) return false;
-        if (activeFilters.status === "ARCHIVED" && item.isActive) return false;
-      }
-      return true;
-    },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /products request.
+  const { data, isLoading, isError, refetch } = useProducts({
+    search: search || undefined,
+    type: filters.type === "ALL" ? undefined : (filters.type as ProductType),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "ARCHIVED"),
+    page: currentPage,
+    limit: pageSize,
+  });
+  const archiveProduct = useArchiveProduct();
+
+  const totalItems = data?.meta.total || 0;
+  const totalPages = data?.meta.totalPages || 0;
+  const paginatedData = data?.products || [];
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   const handleArchive = async (id: string) => {
     try {
@@ -120,7 +119,7 @@ export default function ProductsPage() {
       {!isLoading && !isError && data && data.products.length > 0 && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
             searchPlaceholder="Search products by name, category, or type..."
             filterOptions={[
@@ -148,7 +147,7 @@ export default function ProductsPage() {
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.products.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

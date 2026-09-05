@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Plus, User } from "lucide-react";
+import { Mail, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,53 +14,47 @@ import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
 import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
-import type { Contact } from "@/features/contacts/services/contacts.service";
+import type { ContactType } from "@/features/contacts/services/contacts.service";
 
 export default function ContactsPage() {
   const [view, setView] = useState<ViewMode>("list");
-  const { data, isLoading, isError, refetch } = useContacts();
-  const updateContact = useUpdateContact();
-  const resendEmail = useResendActivationEmail();
 
   const {
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
     resetFilters,
     isFiltered,
     currentPage,
-    pageSize,
     setPage,
+    pageSize,
     setPageSize,
-    totalItems,
-    totalPages,
-    paginatedData,
-    startIndex,
-    endIndex,
-  } = useDataTable<Contact>({
-    data: data?.contacts,
+  } = useServerDataTable({
     defaultPageSize: 10,
-    searchFields: ["name", "email", "mobile", "city", "state", "pincode"],
     initialFilters: { type: "ALL", status: "ALL" },
-    filterPredicate: (contact, currentFilters) => {
-      // Filter by Type
-      if (currentFilters.type && currentFilters.type !== "ALL") {
-        if (contact.type !== currentFilters.type && contact.type !== "BOTH") {
-          return false;
-        }
-      }
-      // Filter by Status
-      if (currentFilters.status && currentFilters.status !== "ALL") {
-        if (currentFilters.status === "ACTIVE" && !contact.isActive) return false;
-        if (currentFilters.status === "ARCHIVED" && contact.isActive) return false;
-        if (currentFilters.status === "PENDING_ACTIVATION" && contact.isActivated) return false;
-      }
-      return true;
-    },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /contacts request.
+  const { data, isLoading, isError, refetch } = useContacts({
+    search: search || undefined,
+    type: filters.type === "ALL" ? undefined : (filters.type as ContactType),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "ARCHIVED" | "PENDING_ACTIVATION"),
+    page: currentPage,
+    limit: pageSize,
+  });
+  const updateContact = useUpdateContact();
+  const resendEmail = useResendActivationEmail();
+
+  const totalItems = data?.meta.total || 0;
+  const totalPages = data?.meta.totalPages || 0;
+  const paginatedData = data?.contacts || [];
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
 
   async function handleArchive(id: string) {
     try {
@@ -136,7 +129,7 @@ export default function ContactsPage() {
       {!isLoading && !isError && data && data.contacts.length > 0 && (
         <div className="flex flex-col gap-4">
           <DataTableToolbar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             onSearchChange={setSearchQuery}
             searchPlaceholder="Search name, email, phone, city..."
             filters={[
@@ -166,7 +159,7 @@ export default function ContactsPage() {
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
             totalResults={totalItems}
-            unfilteredTotal={data.contacts.length}
+            unfilteredTotal={totalItems}
           />
 
           {paginatedData.length === 0 ? (

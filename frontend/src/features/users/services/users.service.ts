@@ -29,6 +29,9 @@ export interface UserListResult {
 }
 
 export interface ListUsersParams {
+  search?: string;
+  role?: StaffRole;
+  status?: "ACTIVE" | "INACTIVE";
   page?: number;
   limit?: number;
 }

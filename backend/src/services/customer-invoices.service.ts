@@ -4,6 +4,7 @@ import { AppError } from "../utils/AppError";
 
 interface ListCustomerInvoicesOptions {
   status?: string;
+  search?: string;
   page?: number;
   limit?: number;
   customerId?: string;
@@ -19,6 +20,12 @@ export async function listCustomerInvoices(options: ListCustomerInvoicesOptions)
   }
   if (options.customerId) {
     where.customerId = options.customerId;
+  }
+  if (options.search) {
+    where.OR = [
+      { invoiceNumber: { contains: options.search } },
+      { customer: { name: { contains: options.search } } },
+    ];
   }
 
   const [invoices, total] = await prisma.$transaction([

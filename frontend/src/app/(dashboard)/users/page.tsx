@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Users } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,16 +11,15 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { UserFormDialog } from "@/features/users/components/UserFormDialog";
 import { useUpdateUser, useUsers } from "@/features/users/hooks/useUsers";
-import type { StaffUser } from "@/features/users/services/users.service";
+import type { StaffRole } from "@/features/users/services/users.service";
 
 export default function UsersPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
-  const { data, isLoading, isError, refetch } = useUsers();
   const updateUser = useUpdateUser();
 
   // Role guard: Non-admins (e.g. Accountants) cannot view or manage users
@@ -31,42 +29,36 @@ export default function UsersPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  const rawUsers = useMemo(() => data?.users ?? [], [data?.users]);
-
   const {
-    paginatedData,
-    filteredData,
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
     resetFilters,
-    hasActiveFilters,
-    totalItems,
+    isFiltered,
     currentPage,
-    setCurrentPage,
+    setPage,
     pageSize,
     setPageSize,
-    totalPages,
-  } = useDataTable<StaffUser>({
-    data: rawUsers,
-    searchFields: ["name", "loginId", "email"],
-    filterPredicate: (item, currentFilters) => {
-      const roleFilter = currentFilters.role;
-      if (roleFilter && roleFilter !== "ALL" && item.role !== roleFilter) {
-        return false;
-      }
-      const statusFilter = currentFilters.status;
-      if (statusFilter && statusFilter !== "ALL") {
-        const itemStatus = item.isActive ? "ACTIVE" : "INACTIVE";
-        if (itemStatus !== statusFilter) {
-          return false;
-        }
-      }
-      return true;
-    },
+  } = useServerDataTable({
     defaultPageSize: 10,
+    initialFilters: { role: "ALL", status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /users request.
+  const { data, isLoading, isError, refetch } = useUsers({
+    search: search || undefined,
+    role: filters.role === "ALL" ? undefined : (filters.role as StaffRole),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "INACTIVE"),
+    page: currentPage,
+    limit: pageSize,
+  });
+
+  const paginatedData = data?.users ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
   if (!isAuthLoading && user && user.role !== "ADMIN") {
     return null;
@@ -102,7 +94,7 @@ export default function UsersPage() {
 
       {/* Toolbar with Search and Filters */}
       <DataTableToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search by name, login ID, email..."
         filterOptions={[
@@ -127,10 +119,10 @@ export default function UsersPage() {
         ]}
         selectedFilters={filters}
         onFilterChange={setFilter}
-        hasActiveFilters={hasActiveFilters}
+        hasActiveFilters={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={rawUsers.length}
-        filteredCount={filteredData.length}
+        totalCount={totalItems}
+        filteredCount={totalItems}
       />
 
       {isLoading && (
@@ -150,14 +142,14 @@ export default function UsersPage() {
         </div>
       )}
 
-      {!isLoading && !isError && rawUsers.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No staff users yet.</p>
           <UserFormDialog trigger={<Button>Create your first user</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && rawUsers.length > 0 && filteredData.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && isFiltered && (
         <DataTableEmptyState
           icon={Users}
           title="No users match your criteria"
@@ -223,7 +215,7 @@ export default function UsersPage() {
               totalPages={totalPages}
               pageSize={pageSize}
               totalItems={totalItems}
-              onPageChange={setCurrentPage}
+              onPageChange={setPage}
               onPageSizeChange={setPageSize}
             />
           </div>

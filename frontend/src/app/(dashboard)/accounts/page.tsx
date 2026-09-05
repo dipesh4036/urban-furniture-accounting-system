@@ -1,9 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { BookOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,51 +9,43 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
-import { useDataTable } from "@/hooks/useDataTable";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { AccountFormDialog } from "@/features/accounts/components/AccountFormDialog";
 import { useAccounts, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
-import type { Account, AccountType } from "@/features/accounts/services/accounts.service";
+import type { AccountType } from "@/features/accounts/services/accounts.service";
 
 export default function AccountsPage() {
-  const { data, isLoading, isError, refetch } = useAccounts();
-  const updateAccount = useUpdateAccount();
-
-  const rawAccounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
-
   const {
-    paginatedData,
-    filteredData,
-    searchQuery,
+    searchInput,
+    search,
     setSearchQuery,
     filters,
     setFilter,
     resetFilters,
-    hasActiveFilters,
-    totalItems,
+    isFiltered,
     currentPage,
-    setCurrentPage,
+    setPage,
     pageSize,
     setPageSize,
-    totalPages,
-  } = useDataTable<Account>({
-    data: rawAccounts,
-    searchFields: ["name", "type"],
-    filterPredicate: (item, currentFilters) => {
-      const typeFilter = currentFilters.type;
-      if (typeFilter && typeFilter !== "ALL" && item.type !== typeFilter) {
-        return false;
-      }
-      const statusFilter = currentFilters.status;
-      if (statusFilter && statusFilter !== "ALL") {
-        const itemStatus = item.isActive ? "ACTIVE" : "ARCHIVED";
-        if (itemStatus !== statusFilter) {
-          return false;
-        }
-      }
-      return true;
-    },
+  } = useServerDataTable({
     defaultPageSize: 10,
+    initialFilters: { type: "ALL", status: "ALL" },
   });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /accounts request.
+  const { data, isLoading, isError, refetch } = useAccounts({
+    search: search || undefined,
+    type: filters.type === "ALL" ? undefined : (filters.type as AccountType),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "ARCHIVED"),
+    page: currentPage,
+    limit: pageSize,
+  });
+  const updateAccount = useUpdateAccount();
+
+  const paginatedData = data?.accounts ?? [];
+  const totalItems = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
   async function handleArchive(id: string) {
     try {
@@ -86,7 +76,7 @@ export default function AccountsPage() {
 
       {/* Toolbar */}
       <DataTableToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search accounts by name or type..."
         filterOptions={[
@@ -97,7 +87,7 @@ export default function AccountsPage() {
               { label: "All Types", value: "ALL" },
               { label: "Asset", value: "ASSET" },
               { label: "Liability", value: "LIABILITY" },
-              { label: "Equity", value: "EQUITY" },
+              { label: "Capital", value: "CAPITAL" },
               { label: "Income", value: "INCOME" },
               { label: "Expense", value: "EXPENSE" },
             ],
@@ -114,10 +104,10 @@ export default function AccountsPage() {
         ]}
         selectedFilters={filters}
         onFilterChange={setFilter}
-        hasActiveFilters={hasActiveFilters}
+        hasActiveFilters={isFiltered}
         onResetFilters={resetFilters}
-        totalCount={rawAccounts.length}
-        filteredCount={filteredData.length}
+        totalCount={totalItems}
+        filteredCount={totalItems}
       />
 
       {isLoading && (
@@ -135,14 +125,14 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && rawAccounts.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && !isFiltered && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No accounts yet.</p>
           <AccountFormDialog trigger={<Button>Create your first account</Button>} />
         </div>
       )}
 
-      {!isLoading && !isError && rawAccounts.length > 0 && filteredData.length === 0 && (
+      {!isLoading && !isError && totalItems === 0 && isFiltered && (
         <DataTableEmptyState
           icon={BookOpen}
           title="No accounts match your criteria"
@@ -198,7 +188,7 @@ export default function AccountsPage() {
               totalPages={totalPages}
               pageSize={pageSize}
               totalItems={totalItems}
-              onPageChange={setCurrentPage}
+              onPageChange={setPage}
               onPageSizeChange={setPageSize}
             />
           </div>
