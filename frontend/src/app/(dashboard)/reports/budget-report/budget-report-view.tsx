@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RequiredMark } from "@/components/common/RequiredMark";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBudgetReport } from "@/features/reports/hooks/useReports";
+import type { BudgetReportResult } from "@/features/reports/services/reports.service";
+import { addReportTable, createReportDoc } from "@/features/reports/utils/reportPdf";
 
 // "-" for null, not "0.00" - a null actual/variance means it genuinely
 // hasn't been computed yet (no analytic linkage on JournalItem), which
@@ -20,6 +23,26 @@ function formatAmount(value: string | null): string {
 function defaultPeriod(): string {
   const now = new Date();
   return `${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}`;
+}
+
+function downloadBudgetReportPdf(period: string, data: BudgetReportResult) {
+  const doc = createReportDoc("Budget Report", `Period: ${period}`);
+
+  addReportTable(
+    doc,
+    32,
+    ["Budget", "Analytic Account", "Responsible Person", "Planned", "Actual", "Variance"],
+    data.budgets.map((budget) => [
+      budget.budgetName,
+      `${budget.analyticAccountName} (${budget.analyticAccountType})`,
+      budget.responsiblePerson.name,
+      formatAmount(budget.plannedAmount),
+      formatAmount(budget.actualAmount),
+      formatAmount(budget.variance),
+    ])
+  );
+
+  doc.save(`budget-report-${period}.pdf`);
 }
 
 export function BudgetReportView() {
@@ -40,9 +63,18 @@ export function BudgetReportView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Budget Report</h1>
-        <p className="text-sm text-muted-foreground">Planned vs actual spend per analytic account.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Budget Report</h1>
+          <p className="text-sm text-muted-foreground">Planned vs actual spend per analytic account.</p>
+        </div>
+
+        {data && (
+          <Button variant="outline" onClick={() => downloadBudgetReportPdf(period, data)}>
+            <Download className="size-4" />
+            Download PDF
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 sm:w-64">

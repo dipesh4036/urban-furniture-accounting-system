@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProfitLoss } from "@/features/reports/hooks/useReports";
-import type { ProfitLossAccount } from "@/features/reports/services/reports.service";
+import type { ProfitLossAccount, ProfitLossReport } from "@/features/reports/services/reports.service";
+import { addReportTable, createReportDoc, getFinalY } from "@/features/reports/utils/reportPdf";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -21,6 +23,32 @@ function today(): string {
 
 function formatAmount(value: string): string {
   return Number(value).toFixed(2);
+}
+
+function downloadProfitLossPdf(from: string, to: string, data: ProfitLossReport) {
+  const doc = createReportDoc("Profit & Loss", `${from} to ${to}`);
+  let y = 32;
+
+  y = addReportTable(
+    doc,
+    y,
+    ["Income", "Amount"],
+    [...data.income.map((a) => [a.accountName, formatAmount(a.amount)]), ["Total Income", formatAmount(data.totalIncome)]]
+  );
+
+  addReportTable(
+    doc,
+    y + 8,
+    ["Expenses", "Amount"],
+    [
+      ...data.expenses.map((a) => [a.accountName, formatAmount(a.amount)]),
+      ["Total Expenses", formatAmount(data.totalExpenses)],
+    ]
+  );
+
+  doc.text(`Net Profit: ${formatAmount(data.netProfit)}`, 14, getFinalY(doc) + 12);
+
+  doc.save(`profit-loss-${from}-to-${to}.pdf`);
 }
 
 function Section({ title, accounts, total }: { title: string; accounts: ProfitLossAccount[]; total: string }) {
@@ -80,9 +108,18 @@ export function ProfitLossView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profit &amp; Loss</h1>
-        <p className="text-sm text-muted-foreground">Income and expenses over a date range.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Profit &amp; Loss</h1>
+          <p className="text-sm text-muted-foreground">Income and expenses over a date range.</p>
+        </div>
+
+        {data && (
+          <Button variant="outline" onClick={() => downloadProfitLossPdf(from, to, data)}>
+            <Download className="size-4" />
+            Download PDF
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:w-96">

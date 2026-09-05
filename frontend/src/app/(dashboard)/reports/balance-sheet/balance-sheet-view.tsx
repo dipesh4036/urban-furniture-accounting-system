@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBalanceSheet } from "@/features/reports/hooks/useReports";
-import type { BalanceSheetAccount } from "@/features/reports/services/reports.service";
+import type { BalanceSheetAccount, BalanceSheetReport } from "@/features/reports/services/reports.service";
+import { addReportTable, createReportDoc } from "@/features/reports/utils/reportPdf";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -22,6 +24,40 @@ function formatAmount(value: string): string {
 // per section - so each section's own subtotal is summed here instead.
 function sumBalances(accounts: BalanceSheetAccount[]): string {
   return accounts.reduce((sum, account) => sum + Number(account.balance), 0).toString();
+}
+
+function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
+  const doc = createReportDoc("Balance Sheet", `As of ${asOf}`);
+  let y = 32;
+
+  y = addReportTable(
+    doc,
+    y,
+    ["Assets", "Balance"],
+    [...data.assets.map((a) => [a.accountName, formatAmount(a.balance)]), ["Total Assets", formatAmount(data.totalAssets)]]
+  );
+
+  y = addReportTable(
+    doc,
+    y + 8,
+    ["Liabilities", "Balance"],
+    [
+      ...data.liabilities.map((a) => [a.accountName, formatAmount(a.balance)]),
+      ["Total Liabilities", formatAmount(sumBalances(data.liabilities))],
+    ]
+  );
+
+  addReportTable(
+    doc,
+    y + 8,
+    ["Capital", "Balance"],
+    [
+      ...data.capital.map((a) => [a.accountName, formatAmount(a.balance)]),
+      ["Total Capital", formatAmount(sumBalances(data.capital))],
+    ]
+  );
+
+  doc.save(`balance-sheet-${asOf}.pdf`);
 }
 
 function Section({ title, accounts, total }: { title: string; accounts: BalanceSheetAccount[]; total: string }) {
@@ -78,9 +114,18 @@ export function BalanceSheetView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Balance Sheet</h1>
-        <p className="text-sm text-muted-foreground">Assets, liabilities, and capital as of a given date.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Balance Sheet</h1>
+          <p className="text-sm text-muted-foreground">Assets, liabilities, and capital as of a given date.</p>
+        </div>
+
+        {data && (
+          <Button variant="outline" onClick={() => downloadBalanceSheetPdf(asOf, data)}>
+            <Download className="size-4" />
+            Download PDF
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 sm:w-64">
