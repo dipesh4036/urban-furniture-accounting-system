@@ -9,3 +9,27 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+enum StaffRole {
+  ADMIN
+  ACCOUNTANT
+}
+
+// Staff accounts (Admin / Accountant). Created by an Admin through the
+// Create User page - never through public self-signup. See plan.md
+// Module 3 for the full auth model.
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  loginId             String    @unique
+  email               String    @unique
+  passwordHash        String
+  role                StaffRole
+  isActive            Boolean   @default(true)
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@map("users")
+}
