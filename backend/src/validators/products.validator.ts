@@ -39,7 +39,7 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export const listProductsQuerySchema = z.object({
   type: productTypeSchema.optional(),
   search: z.string().optional(),
-  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+  status: z.enum(["ACTIVE", "ARCHIVED", "INACTIVE"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });
