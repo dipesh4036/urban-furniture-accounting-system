@@ -24,7 +24,11 @@ const navItems = [
   { label: "Journal Entries", href: "/journal-entries" },
   { label: "Analytic Accounts", href: "/analytic-accounts" },
   { label: "Budgets", href: "/budgets" },
-  { label: "Reports", href: "/reports" },
+  // No /reports index page exists yet - direct links to each report
+  // instead of a generic "Reports" link that goes nowhere.
+  { label: "Balance Sheet", href: "/reports/balance-sheet" },
+  { label: "Profit & Loss", href: "/reports/profit-loss" },
+  { label: "Budget Report", href: "/reports/budget-report" },
   { label: "Users", href: "/users" },
 ];
 
