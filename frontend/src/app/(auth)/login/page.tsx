@@ -25,7 +25,7 @@ export default function LoginPage() {
   async function onSubmit(values: LoginFormValues) {
     try {
       await login(values);
-      router.push("/contacts");
+      router.push("/dashboard");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed");
     }
