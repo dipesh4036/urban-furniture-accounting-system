@@ -1,35 +1,41 @@
-// Layout for all auth pages: /login, /forgot-password, /reset-password,
-// /activate-account, /portal/login. Just centers a card on the screen -
-// no sidebar, no topbar, no logic. Each page renders inside {children}.
-//
-// The card fades and slides in slightly on load (motion-safe: only, so it's
-// skipped entirely for anyone with "reduce motion" turned on) - this is a
-// page someone lands on rarely, so a little polish here doesn't cost the
-// "never animate something seen 100x/day" rule further down the app.
+import { Armchair, Lamp, Sofa } from "lucide-react";
+
+// Shared shell for every auth page: /login, /forgot-password,
+// /reset-password, /activate-account. Split into a branding panel on
+// the left (hidden on small screens) and the actual page content on
+// the right - each page just renders its own form/heading in {children}.
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted p-4">
-      {/*
-        Ambient dot-grid background (taste-and-motion SKILL.md "Craft Bar" -
-        an entry screen shouldn't just be a flat fill color). Built from two
-        plain CSS layers, no image asset and no new dependency:
-          1. a repeating radial-gradient of small dots, using the theme's
-             own --border color so it holds in both light and dark mode
-          2. a radial-gradient mask that fades the whole pattern out toward
-             the edges, so it reads as texture behind the card, not a graphic
-        z-10 on the card below keeps it painted on top of this layer.
-      */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_55%_55%_at_50%_40%,black,transparent)]"
-        style={{
-          backgroundImage: "radial-gradient(var(--color-border) 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-        }}
-      />
+    <div className="flex min-h-screen">
+      <div className="hidden flex-1 flex-col justify-between bg-muted p-12 lg:flex">
+        <div>
+          <h1 className="text-2xl font-bold">Urban Furniture</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Accounting System</p>
+        </div>
 
-      <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 relative z-10 w-full max-w-md rounded-lg border bg-background p-8 shadow-sm duration-300 [animation-timing-function:var(--ease-out)]">
-        {children}
+        {/*
+          A simple furniture-themed illustration built from icons instead
+          of an image file - stays crisp at any size and follows the
+          theme's colors automatically in light/dark mode.
+        */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="relative flex size-64 items-center justify-center rounded-full bg-primary/10">
+            <Sofa className="size-28 text-primary" strokeWidth={1.25} />
+            <Armchair className="absolute -bottom-2 -left-6 size-16 text-primary/70" strokeWidth={1.25} />
+            <Lamp className="absolute -top-2 -right-4 size-16 text-primary/70" strokeWidth={1.25} />
+          </div>
+        </div>
+
+        <div>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Manage contacts, sales, purchases and reports in one place.
+          </p>
+          <p className="mt-4 text-xs text-muted-foreground">Roles supported: Admin, Invoicing User, Contact</p>
+        </div>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-lg border bg-background p-8 shadow-sm">{children}</div>
       </div>
     </div>
   );

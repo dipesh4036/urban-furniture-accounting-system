@@ -43,7 +43,7 @@ export function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Invalid reset link</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Invalid reset link</h1>
         <p className="text-sm text-muted-foreground">
           This link is missing its token. Please request a new password reset email.
         </p>
@@ -53,10 +53,7 @@ export function ResetPasswordForm() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2 text-center">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground">Urban Furniture</span>
-        <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
-      </div>
+      <h1 className="text-xl font-semibold tracking-tight">Reset your password</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
