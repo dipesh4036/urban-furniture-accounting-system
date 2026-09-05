@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -63,9 +64,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-6">
-            <Link href="/portal/invoices" className="flex items-center gap-2.5 group">
-              <div className="size-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <Building2 className="size-5" />
+            <Link href="/portal/invoices" className="flex items-center gap-3 group">
+              <div className="relative size-9 shrink-0 overflow-hidden rounded-lg border border-border/50 shadow-xs">
+                <Image
+                  src="/logo.jpg"
+                  alt="Urban Furniture Logo"
+                  fill
+                  className="object-cover"
+                  priority
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold tracking-tight text-foreground leading-none">
