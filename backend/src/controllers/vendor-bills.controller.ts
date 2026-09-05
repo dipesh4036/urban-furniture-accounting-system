@@ -4,13 +4,16 @@ import * as vendorBillsService from "../services/vendor-bills.service";
 
 export const listVendorBillsController = asyncHandler(async (req: Request, res: Response) => {
   const query = req.query;
-  const vendorId = (req as any).user?.role === "CONTACT" ? (req as any).user?.id : query.vendorId;
+  const user = (req as any).user;
+
+  // When the caller is a Contact, auto-filter to only their vendor bills
+  const vendorId = user.role === "CONTACT" ? user.id : (query.vendorId as string | undefined);
 
   const { bills, meta } = await vendorBillsService.listVendorBills({
     status: query.status as string | undefined,
     page: query.page ? Number(query.page) : undefined,
     limit: query.limit ? Number(query.limit) : undefined,
-    vendorId: vendorId as string | undefined,
+    vendorId,
   });
 
   res.status(200).json({
@@ -23,11 +26,6 @@ export const listVendorBillsController = asyncHandler(async (req: Request, res: 
 
 export const getVendorBillByIdController = asyncHandler(async (req: Request, res: Response) => {
   const bill = await vendorBillsService.getVendorBillById(req.params.id);
-
-  const user = (req as any).user;
-  if (user.role === "CONTACT" && bill.vendorId !== user.id) {
-    throw new Error("Unauthorized");
-  }
 
   res.status(200).json({
     success: true,

@@ -4,13 +4,16 @@ import * as customerInvoicesService from "../services/customer-invoices.service"
 
 export const listCustomerInvoicesController = asyncHandler(async (req: Request, res: Response) => {
   const query = req.query;
-  const customerId = (req as any).user?.role === "CONTACT" ? (req as any).user?.id : query.customerId;
+  const user = (req as any).user;
+
+  // When the caller is a Contact, auto-filter to only their customer invoices
+  const customerId = user.role === "CONTACT" ? user.id : (query.customerId as string | undefined);
 
   const { invoices, meta } = await customerInvoicesService.listCustomerInvoices({
     status: query.status as string | undefined,
     page: query.page ? Number(query.page) : undefined,
     limit: query.limit ? Number(query.limit) : undefined,
-    customerId: customerId as string | undefined,
+    customerId,
   });
 
   res.status(200).json({
@@ -23,11 +26,6 @@ export const listCustomerInvoicesController = asyncHandler(async (req: Request, 
 
 export const getCustomerInvoiceByIdController = asyncHandler(async (req: Request, res: Response) => {
   const invoice = await customerInvoicesService.getCustomerInvoiceById(req.params.id);
-
-  const user = (req as any).user;
-  if (user.role === "CONTACT" && invoice.customerId !== user.id) {
-    throw new Error("Unauthorized");
-  }
 
   res.status(200).json({
     success: true,

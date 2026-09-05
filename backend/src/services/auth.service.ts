@@ -26,6 +26,7 @@ export async function comparePassword(plainPassword: string, passwordHash: strin
 // Contact Master feature is built.
 export interface TokenPayload {
   sub: string; // the user's or contact's id
+  id?: string;
   role: string; // "ADMIN" | "ACCOUNTANT" | "CONTACT"
 }
 
@@ -90,20 +91,31 @@ export async function login(loginId: string, password: string): Promise<LoginRes
 // Used by GET /auth/me - looks up the full profile for whoever the
 // access token belongs to, so the frontend gets real user data back
 // instead of just the raw {sub, role} JWT payload.
-export async function getCurrentUser(userId: string): Promise<SafeUser> {
+export async function getCurrentUser(userId: string): Promise<SafeUser | SafeContact> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  if (!user || !user.isActive) {
-    throw new AppError(401, "Session is no longer valid", "NOT_AUTHENTICATED");
+  if (user && user.isActive) {
+    return {
+      id: user.id,
+      name: user.name,
+      loginId: user.loginId,
+      email: user.email,
+      role: user.role,
+    };
   }
 
-  return {
-    id: user.id,
-    name: user.name,
-    loginId: user.loginId,
-    email: user.email,
-    role: user.role,
-  };
+  const contact = await prisma.contact.findUnique({ where: { id: userId } });
+  if (contact && contact.isActive) {
+    return {
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      type: contact.type,
+      role: "CONTACT",
+    };
+  }
+
+  throw new AppError(401, "Session is no longer valid", "NOT_AUTHENTICATED");
 }
 
 // If a User exists with this email, generate a reset token and email
