@@ -20,6 +20,8 @@ const navItems = [
   { label: "Products", href: "/products" },
   { label: "Journals", href: "/journals" },
   { label: "Journal Entries", href: "/journal-entries" },
+  { label: "Analytic Accounts", href: "/analytic-accounts" },
+  { label: "Budgets", href: "/budgets" },
   { label: "Reports", href: "/reports" },
   { label: "Users", href: "/users" },
 ];
