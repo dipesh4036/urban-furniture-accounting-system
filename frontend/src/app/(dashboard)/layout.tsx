@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import Link from "next/link";
+import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 // Top-level nav categories for the staff dashboard, grouped to match
@@ -68,6 +69,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {isLoading ? "Loading..." : (user?.name ?? "")}
             </span>
           </div>
+
+          <LogoutButton />
         </div>
       </header>
 

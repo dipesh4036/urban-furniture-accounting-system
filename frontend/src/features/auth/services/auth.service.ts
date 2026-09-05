@@ -24,6 +24,12 @@ export function me(): Promise<{ user: AuthUser }> {
   return api.get("/auth/me");
 }
 
+// Calls POST /auth/logout, which clears the accessToken/refreshToken
+// cookies on the backend.
+export function logout() {
+  return api.post("/auth/logout");
+}
+
 // Calls POST /auth/forgot-password. The backend always replies 200
 // whether or not the email has an account (so an attacker can't use
 // this to check which emails exist) - so this never really "fails"
