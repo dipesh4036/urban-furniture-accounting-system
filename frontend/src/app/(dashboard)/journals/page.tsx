@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Plus } from "lucide-react";
+import { BookMarked, BookOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -101,19 +101,28 @@ export default function JournalsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Journal Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Default Account</TableHead>
+                  <TableHead className="w-[40%] min-w-[220px]">Journal Name</TableHead>
+                  <TableHead className="w-[25%] min-w-[140px]">Type</TableHead>
+                  <TableHead className="w-[35%] min-w-[220px]">Default Account</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedData.map((journal) => (
                   <TableRow key={journal.id}>
-                    <TableCell className="font-semibold text-foreground">{journal.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <BookOpen className="size-4" />
+                        </div>
+                        <span className="font-semibold text-foreground">{journal.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={journal.type} showDot={false} size="sm" />
                     </TableCell>
-                    <TableCell className="text-right font-medium text-foreground">{accountNameFor(journal.defaultAccountId)}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {accountNameFor(journal.defaultAccountId)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -124,6 +133,8 @@ export default function JournalsPage() {
               totalPages={totalPages}
               pageSize={pageSize}
               totalItems={totalItems}
+              startIndex={paginatedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+              endIndex={Math.min(currentPage * pageSize, totalItems)}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
             />
@@ -133,4 +144,3 @@ export default function JournalsPage() {
     </div>
   );
 }
-
