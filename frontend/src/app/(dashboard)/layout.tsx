@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import Link from "next/link";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -41,8 +40,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-16 items-center gap-6 border-b px-6">
-        <span className="text-lg font-bold">Urban Furniture</span>
+      <header className="sticky top-0 z-50 flex h-16 items-center gap-6 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <Link href="/dashboard" className="flex items-center gap-2 transition-opacity hover:opacity-90">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md">
+            <span className="text-sm font-bold tracking-tighter">UF</span>
+          </div>
+          <span className="text-xl font-bold tracking-tight text-foreground">
+            Urban<span className="font-medium text-muted-foreground">Furniture</span>
+          </span>
+        </Link>
 
         <nav className="flex items-center gap-1">
           {navItems.map((item) => (
@@ -57,16 +63,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          <div className="relative hidden sm:block">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search..."
-              disabled
-              className="h-9 w-56 rounded-md border bg-transparent pl-8 text-sm text-muted-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
               {isLoading || !user ? "" : initialsFor(user.name)}
