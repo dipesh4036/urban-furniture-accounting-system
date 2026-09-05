@@ -1,10 +1,13 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { useState } from "react";
+import { Download, PieChart } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RequiredMark } from "@/components/common/RequiredMark";
+import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -146,6 +149,7 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
 }
 
 export function BudgetReportView() {
+  const [view, setView] = useState<ViewMode>("list");
   const router = useRouter();
   const searchParams = useSearchParams();
   // Reading straight from the URL is what makes this page shareable and
@@ -163,18 +167,21 @@ export function BudgetReportView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Budget Report</h1>
           <p className="text-sm text-muted-foreground">Planned vs actual spend per analytic account.</p>
         </div>
 
-        {data && (
-          <Button variant="outline" onClick={() => downloadBudgetReportPdf(period, data)}>
-            <Download className="size-4" />
-            Download PDF
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onViewChange={setView} />
+          {data && (
+            <Button variant="outline" size="sm" onClick={() => downloadBudgetReportPdf(period, data)}>
+              <Download className="mr-2 size-4" />
+              Download PDF
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 sm:w-64">
@@ -207,36 +214,85 @@ export function BudgetReportView() {
       )}
 
       {!isLoading && !isError && data && data.budgets.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Budget</TableHead>
-              <TableHead>Analytic Account</TableHead>
-              <TableHead>Responsible Person</TableHead>
-              <TableHead className="text-right">Planned</TableHead>
-              <TableHead className="text-right">Actual</TableHead>
-              <TableHead className="text-right">Variance</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.budgets.map((budget) => (
-              <TableRow key={budget.budgetId}>
-                <TableCell className="font-medium">{budget.budgetName}</TableCell>
-                <TableCell>
-                  {budget.analyticAccountName}{" "}
-                  <Badge variant="outline" className="ml-1">
-                    {budget.analyticAccountType}
-                  </Badge>
-                </TableCell>
-                <TableCell>{budget.responsiblePerson.name}</TableCell>
-                <TableCell className="text-right">{formatAmount(budget.plannedAmount)}</TableCell>
-                <TableCell className="text-right">{formatAmount(budget.actualAmount)}</TableCell>
-                <TableCell className="text-right">{formatAmount(budget.variance)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <>
+          {view === "list" ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Budget</TableHead>
+                  <TableHead>Analytic Account</TableHead>
+                  <TableHead>Responsible Person</TableHead>
+                  <TableHead className="text-right">Planned</TableHead>
+                  <TableHead className="text-right">Actual</TableHead>
+                  <TableHead className="text-right">Variance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.budgets.map((budget) => (
+                  <TableRow key={budget.budgetId}>
+                    <TableCell className="font-medium">{budget.budgetName}</TableCell>
+                    <TableCell>
+                      {budget.analyticAccountName}{" "}
+                      <Badge variant="outline" className="ml-1">
+                        {budget.analyticAccountType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{budget.responsiblePerson.name}</TableCell>
+                    <TableCell className="text-right">{formatAmount(budget.plannedAmount)}</TableCell>
+                    <TableCell className="text-right">{formatAmount(budget.actualAmount)}</TableCell>
+                    <TableCell className="text-right">{formatAmount(budget.variance)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {data.budgets.map((budget) => (
+                <Card key={budget.budgetId} className="flex flex-col justify-between transition-all hover:shadow-md">
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <PieChart className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground line-clamp-1">{budget.budgetName}</h3>
+                        <p className="text-xs text-muted-foreground">Manager: {budget.responsiblePerson.name}</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Analytic Account:</span>
+                      <span className="font-medium text-foreground">
+                        {budget.analyticAccountName}{" "}
+                        <Badge variant="outline" className="ml-1 text-[10px]">
+                          {budget.analyticAccountType}
+                        </Badge>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-2.5 text-center">
+                      <div>
+                        <p className="text-[11px] font-medium text-muted-foreground">Planned</p>
+                        <p className="font-semibold text-foreground">${formatAmount(budget.plannedAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-muted-foreground">Actual</p>
+                        <p className="font-semibold text-foreground">${formatAmount(budget.actualAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-muted-foreground">Variance</p>
+                        <p className="font-semibold text-foreground">${formatAmount(budget.variance)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
+
