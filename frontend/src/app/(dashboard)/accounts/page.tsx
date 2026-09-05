@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -152,11 +153,11 @@ export default function AccountsPage() {
 
       {!isLoading && !isError && paginatedData.length > 0 && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+          <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Name</TableHead>
+                <TableRow>
+                  <TableHead>Account Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -165,22 +166,15 @@ export default function AccountsPage() {
               <TableBody>
                 {paginatedData.map((account) => (
                   <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.name}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{account.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {account.type}
-                      </Badge>
+                      <StatusBadge status={account.type} showDot={false} size="sm" />
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={account.isActive ? "outline" : "secondary"}
-                        className={account.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : ""}
-                      >
-                        {account.isActive ? "Active" : "Archived"}
-                      </Badge>
+                      <StatusBadge status={account.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2">
                         <AccountFormDialog account={account} trigger={<Button variant="outline" size="sm">Edit</Button>} />
                         {account.isActive && (
                           <Button
@@ -198,16 +192,16 @@ export default function AccountsPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
 
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       )}
     </div>

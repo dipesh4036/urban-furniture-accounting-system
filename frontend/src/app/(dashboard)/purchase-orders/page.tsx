@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -17,12 +18,6 @@ import type { PurchaseOrder } from "@/features/purchase-orders/services/purchase
 
 function poTotal(po: PurchaseOrder): number {
   return po.items.reduce((sum, item) => sum + item.quantity * Number(item.unitPrice), 0);
-}
-
-function statusVariant(status: PurchaseOrder["status"]): "default" | "secondary" | "outline" {
-  if (status === "CONFIRMED") return "default";
-  if (status === "BILLED") return "secondary";
-  return "outline"; // DRAFT, CANCELLED
 }
 
 export default function PurchaseOrdersPage() {
@@ -137,7 +132,7 @@ export default function PurchaseOrdersPage() {
           {paginatedData.length === 0 ? (
             <DataTableEmptyState onReset={resetFilters} />
           ) : (
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -152,13 +147,15 @@ export default function PurchaseOrdersPage() {
                 <TableBody>
                   {paginatedData.map((po: PurchaseOrder) => (
                     <TableRow key={po.id}>
-                      <TableCell className="font-medium">{po.poNumber}</TableCell>
-                      <TableCell>{po.vendor.name}</TableCell>
-                      <TableCell>{new Date(po.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{po.poNumber}</TableCell>
+                      <TableCell className="font-medium text-foreground">{po.vendor.name}</TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">{new Date(po.date).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(po.status)}>{po.status}</Badge>
+                        <StatusBadge status={po.status} />
                       </TableCell>
-                      <TableCell className="text-right">₹{poTotal(po).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right font-medium text-foreground tabular-nums">
+                        ₹{poTotal(po).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {po.status === "DRAFT" && (
@@ -168,7 +165,7 @@ export default function PurchaseOrdersPage() {
                               disabled={confirmMutation.isPending}
                               onClick={() => handleConfirm(po.id, po.poNumber)}
                             >
-                              <CheckCircle2 className="size-3.5 mr-1" />
+                              <CheckCircle2 className="size-3.5" />
                               Confirm Order
                             </Button>
                           )}

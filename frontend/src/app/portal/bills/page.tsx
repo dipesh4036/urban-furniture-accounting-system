@@ -28,15 +28,13 @@ import { useVendorBills } from "@/features/vendor-bills/hooks/useVendorBills";
 import type { VendorBill, DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
 import { PortalPayDialog } from "@/features/portal/components/PortalPayDialog";
 
+import { StatusBadge } from "@/components/common/StatusBadge";
+
 function statusBadge(status: DocStatus) {
-  switch (status) {
-    case "PAID":
-      return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Paid</Badge>;
-    case "PARTIALLY_PAID":
-      return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">Partially Paid</Badge>;
-    default:
-      return <Badge variant="outline" className="text-muted-foreground">Unpaid</Badge>;
+  if (status === "UNPAID") {
+    return <StatusBadge status="PENDING" label="Unpaid" size="sm" />;
   }
+  return <StatusBadge status={status} size="sm" />;
 }
 
 function calculatePaidAmount(bill: VendorBill): number {

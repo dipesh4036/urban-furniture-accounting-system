@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -173,12 +174,11 @@ export default function ContactsPage() {
           ) : (
             <>
               {view === "list" ? (
-                <div className="rounded-lg border bg-card">
+                <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead>Name</TableHead>
+                        <TableHead>Contact Name</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Location</TableHead>
@@ -190,39 +190,37 @@ export default function ContactsPage() {
                       {paginatedData.map((contact) => (
                         <TableRow key={contact.id}>
                           <TableCell>
-                            {contact.profileImage ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={toFileUrl(contact.profileImage)}
-                                alt=""
-                                className="size-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                                <User className="size-4" />
-                              </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                              {contact.profileImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={toFileUrl(contact.profileImage)}
+                                  alt=""
+                                  className="size-8 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                                  {contact.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-semibold text-foreground">{contact.name}</span>
+                            </div>
                           </TableCell>
-                          <TableCell className="font-medium">{contact.name}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {contact.type}
-                            </Badge>
+                            <StatusBadge status={contact.type} showDot={false} size="sm" />
                           </TableCell>
-                          <TableCell>{contact.email}</TableCell>
+                          <TableCell className="text-muted-foreground">{contact.email}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">
                             {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant={contact.isActive ? "default" : "secondary"}>
-                                {contact.isActive ? "Active" : "Archived"}
-                              </Badge>
-                              {!contact.isActivated && <Badge variant="outline">Activation Pending</Badge>}
+                            <div className="flex flex-wrap gap-1.5">
+                              <StatusBadge status={contact.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
+                              {!contact.isActivated && <StatusBadge status="ACTIVATION_PENDING" size="sm" />}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2">
                               {!contact.isActivated && (
                                 <Button
                                   variant="outline"
@@ -277,15 +275,13 @@ export default function ContactsPage() {
                                 className="size-10 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <User className="size-5" />
+                              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                                {contact.name.charAt(0).toUpperCase()}
                               </div>
                             )}
                             <div>
                               <h3 className="font-semibold text-foreground line-clamp-1">{contact.name}</h3>
-                              <Badge variant="outline" className="mt-1 text-[10px]">
-                                {contact.type}
-                              </Badge>
+                              <StatusBadge status={contact.type} showDot={false} size="sm" className="mt-1" />
                             </div>
                           </div>
                         </CardHeader>
@@ -296,10 +292,8 @@ export default function ContactsPage() {
                           </div>
 
                           <div className="flex flex-wrap gap-1.5 pt-1">
-                            <Badge variant={contact.isActive ? "default" : "secondary"}>
-                              {contact.isActive ? "Active" : "Archived"}
-                            </Badge>
-                            {!contact.isActivated && <Badge variant="outline">Activation Pending</Badge>}
+                            <StatusBadge status={contact.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
+                            {!contact.isActivated && <StatusBadge status="ACTIVATION_PENDING" size="sm" />}
                           </div>
                         </CardContent>
                         <CardFooter className="flex flex-wrap justify-end gap-2 border-t pt-3">

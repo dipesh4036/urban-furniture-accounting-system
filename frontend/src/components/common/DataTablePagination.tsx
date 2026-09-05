@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "cn";
 
 export interface DataTablePaginationProps {
   currentPage: number;
@@ -74,7 +75,10 @@ export function DataTablePagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-3 border-t border-border/50 text-xs text-muted-foreground ${className}`}
+      className={cn(
+        "flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-border/70 bg-muted/20 text-xs text-muted-foreground",
+        className
+      )}
     >
       {/* Left side: Results counter & items per page */}
       <div className="flex flex-wrap items-center gap-4">

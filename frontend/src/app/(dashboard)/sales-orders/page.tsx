@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -17,12 +18,6 @@ import type { SalesOrder } from "@/features/sales-orders/services/sales-orders.s
 
 function soTotal(so: SalesOrder): number {
   return so.items.reduce((sum, item) => sum + item.quantity * Number(item.unitPrice) + Number(item.tax), 0);
-}
-
-function statusVariant(status: SalesOrder["status"]): "default" | "secondary" | "outline" {
-  if (status === "CONFIRMED") return "default";
-  if (status === "BILLED") return "secondary";
-  return "outline"; // DRAFT, CANCELLED
 }
 
 export default function SalesOrdersPage() {
@@ -131,7 +126,7 @@ export default function SalesOrdersPage() {
           {paginatedData.length === 0 ? (
             <DataTableEmptyState onReset={resetFilters} />
           ) : (
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -146,13 +141,15 @@ export default function SalesOrdersPage() {
                 <TableBody>
                   {paginatedData.map((so: SalesOrder) => (
                     <TableRow key={so.id}>
-                      <TableCell className="font-medium">{so.soNumber}</TableCell>
-                      <TableCell>{so.customer.name}</TableCell>
-                      <TableCell>{new Date(so.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{so.soNumber}</TableCell>
+                      <TableCell className="font-medium text-foreground">{so.customer.name}</TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">{new Date(so.date).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(so.status)}>{so.status}</Badge>
+                        <StatusBadge status={so.status} />
                       </TableCell>
-                      <TableCell className="text-right">₹{soTotal(so).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right font-medium text-foreground tabular-nums">
+                        ₹{soTotal(so).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {so.status === "DRAFT" && (
@@ -162,7 +159,7 @@ export default function SalesOrdersPage() {
                               disabled={confirmMutation.isPending}
                               onClick={() => handleConfirm(so.id, so.soNumber)}
                             >
-                              <CheckCircle2 className="size-3.5 mr-1" />
+                              <CheckCircle2 className="size-3.5" />
                               Confirm Order
                             </Button>
                           )}

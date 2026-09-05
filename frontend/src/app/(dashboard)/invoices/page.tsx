@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -12,12 +13,6 @@ import { RecordPaymentDialog } from "@/features/customer-invoices/components/Rec
 import { useCustomerInvoices } from "@/features/customer-invoices/hooks/useCustomerInvoices";
 import { useDataTable } from "@/hooks/useDataTable";
 import type { CustomerInvoice, DocStatus } from "@/features/customer-invoices/services/customer-invoices.service";
-
-function statusVariant(status: DocStatus): "default" | "secondary" | "outline" {
-  if (status === "PAID") return "default";
-  if (status === "PARTIALLY_PAID") return "secondary";
-  return "outline"; // UNPAID
-}
 
 export default function InvoicesPage() {
   const { data, isLoading, isError, refetch } = useCustomerInvoices();
@@ -123,7 +118,7 @@ export default function InvoicesPage() {
           {paginatedData.length === 0 ? (
             <DataTableEmptyState onReset={resetFilters} />
           ) : (
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -132,25 +127,33 @@ export default function InvoicesPage() {
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount (₹)</TableHead>
-                    <TableHead>Email Sent</TableHead>
+                    <TableHead className="text-center">Email Sent</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedData.map((invoice) => (
                     <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                      <TableCell>{invoice.customer.name}</TableCell>
-                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{invoice.invoiceNumber}</TableCell>
+                      <TableCell className="font-medium text-foreground">{invoice.customer.name}</TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                        <StatusBadge status={invoice.status} />
                       </TableCell>
-                      <TableCell className="text-right">₹{Number(invoice.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right font-medium text-foreground tabular-nums">
+                        ₹{Number(invoice.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-center">
                         {invoice.emailSentAt ? (
-                          <CheckCircle2 className="size-4 text-success" aria-label="Email sent" />
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCircle2 className="size-4 text-emerald-500" />
+                            <span>Sent</span>
+                          </span>
                         ) : (
-                          <XCircle className="size-4 text-muted-foreground" aria-label="Email not sent" />
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <XCircle className="size-4 text-muted-foreground/60" />
+                            <span>No</span>
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">

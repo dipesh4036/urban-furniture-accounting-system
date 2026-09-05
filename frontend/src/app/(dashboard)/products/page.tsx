@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -50,28 +51,26 @@ export default function ProductsPage() {
     defaultPageSize: 10,
     searchFields: ["name", "category", "type"],
     initialFilters: { type: "ALL", status: "ALL" },
-    filterPredicate: (product, currentFilters) => {
-      // Filter by Type
-      if (currentFilters.type && currentFilters.type !== "ALL") {
-        if (product.type !== currentFilters.type) return false;
+    filterPredicate: (item: Product, activeFilters: Record<string, string>) => {
+      if (activeFilters.type && activeFilters.type !== "ALL" && item.type !== activeFilters.type) {
+        return false;
       }
-      // Filter by Status
-      if (currentFilters.status && currentFilters.status !== "ALL") {
-        if (currentFilters.status === "ACTIVE" && !product.isActive) return false;
-        if (currentFilters.status === "ARCHIVED" && product.isActive) return false;
+      if (activeFilters.status && activeFilters.status !== "ALL") {
+        if (activeFilters.status === "ACTIVE" && !item.isActive) return false;
+        if (activeFilters.status === "ARCHIVED" && item.isActive) return false;
       }
       return true;
     },
   });
 
-  async function handleArchive(id: string) {
+  const handleArchive = async (id: string) => {
     try {
       await archiveProduct.mutateAsync(id);
       toast.success("Product archived");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    } catch {
+      toast.error("Failed to archive product");
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,7 +111,7 @@ export default function ProductsPage() {
       )}
 
       {!isLoading && !isError && data && data.products.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No products yet.</p>
           <ProductFormDialog trigger={<Button size="sm">Create your first product</Button>} />
         </div>
@@ -123,16 +122,15 @@ export default function ProductsPage() {
           <DataTableToolbar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search product name, category..."
-            filters={[
+            searchPlaceholder="Search products by name, category, or type..."
+            filterOptions={[
               {
                 key: "type",
                 label: "All Types",
                 options: [
                   { label: "All Types", value: "ALL" },
-                  { label: "Storable", value: "STORABLE" },
+                  { label: "Goods", value: "GOODS" },
                   { label: "Service", value: "SERVICE" },
-                  { label: "Consumable", value: "CONSUMABLE" },
                 ],
               },
               {
@@ -145,7 +143,7 @@ export default function ProductsPage() {
                 ],
               },
             ]}
-            activeFilters={filters}
+            selectedFilters={filters}
             onFilterChange={setFilter}
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
@@ -158,14 +156,14 @@ export default function ProductsPage() {
           ) : (
             <>
               {view === "list" ? (
-                <div className="rounded-lg border bg-card">
+                <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
+                        <TableHead>Product Name</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Sales Price (₹)</TableHead>
-                        <TableHead>Cost (₹)</TableHead>
+                        <TableHead className="text-right">Sales Price (₹)</TableHead>
+                        <TableHead className="text-right">Cost (₹)</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -174,18 +172,22 @@ export default function ProductsPage() {
                     <TableBody>
                       {paginatedData.map((product) => (
                         <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.type}</TableCell>
-                          <TableCell>₹{formatPrice(product.salesPrice)}</TableCell>
-                          <TableCell>₹{formatPrice(product.costPrice)}</TableCell>
-                          <TableCell>{product.category}</TableCell>
+                          <TableCell className="font-semibold text-foreground">{product.name}</TableCell>
                           <TableCell>
-                            <Badge variant={product.isActive ? "default" : "secondary"}>
-                              {product.isActive ? "Active" : "Archived"}
-                            </Badge>
+                            <StatusBadge status={product.type} showDot={false} size="sm" />
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-foreground tabular-nums">
+                            ₹{formatPrice(product.salesPrice)}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular-nums">
+                            ₹{formatPrice(product.costPrice)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{product.category}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={product.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2">
                               <ProductFormDialog product={product} trigger={<Button variant="outline" size="sm">Edit</Button>} />
                               {product.isActive && (
                                 <Button
@@ -227,33 +229,26 @@ export default function ProductsPage() {
                             </div>
                             <div>
                               <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                <Badge variant="outline" className="text-[10px]">
-                                  {product.type}
-                                </Badge>
-                                <Badge variant="secondary" className="text-[10px]">
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                <StatusBadge status={product.type} showDot={false} size="sm" />
+                                <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">
                                   {product.category}
-                                </Badge>
+                                </span>
                               </div>
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-3 pb-3 text-sm">
-                          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2.5">
-                            <div>
-                              <p className="text-[11px] font-medium text-muted-foreground">Sales Price</p>
-                              <p className="font-semibold text-foreground">₹{formatPrice(product.salesPrice)}</p>
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-medium text-muted-foreground">Cost Price</p>
-                              <p className="font-semibold text-muted-foreground">₹{formatPrice(product.costPrice)}</p>
-                            </div>
+                        <CardContent className="space-y-2 pb-3 text-sm">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Sales Price:</span>
+                            <span className="font-semibold text-foreground tabular-nums">₹{formatPrice(product.salesPrice)}</span>
                           </div>
-
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <Badge variant={product.isActive ? "default" : "secondary"}>
-                              {product.isActive ? "Active" : "Archived"}
-                            </Badge>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Cost:</span>
+                            <span className="text-muted-foreground tabular-nums">₹{formatPrice(product.costPrice)}</span>
+                          </div>
+                          <div className="pt-1">
+                            <StatusBadge status={product.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                           </div>
                         </CardContent>
                         <CardFooter className="flex justify-end gap-2 border-t pt-3">

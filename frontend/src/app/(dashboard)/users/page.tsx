@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -167,12 +168,12 @@ export default function UsersPage() {
 
       {!isLoading && !isError && paginatedData.length > 0 && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+          <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Login Id</TableHead>
+                <TableRow>
+                  <TableHead>User Name</TableHead>
+                  <TableHead>Login ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
@@ -182,18 +183,25 @@ export default function UsersPage() {
               <TableBody>
                 {paginatedData.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{u.loginId}</TableCell>
-                    <TableCell>{u.email}</TableCell>
                     <TableCell>
-                      <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
-                        {u.role}
-                      </Badge>
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-semibold text-foreground">{u.name}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={u.isActive ? "outline" : "secondary"} className={u.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : ""}>
-                        {u.isActive ? "Active" : "Inactive"}
-                      </Badge>
+                      <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                        {u.loginId}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={u.role} showDot={false} size="sm" />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={u.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -209,16 +217,16 @@ export default function UsersPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
 
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       )}
     </div>

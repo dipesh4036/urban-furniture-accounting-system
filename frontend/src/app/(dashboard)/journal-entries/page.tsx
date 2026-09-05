@@ -97,7 +97,7 @@ export default function JournalEntriesPage() {
           {paginatedData.length === 0 ? (
             <DataTableEmptyState onReset={resetFilters} />
           ) : (
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -115,11 +115,19 @@ export default function JournalEntriesPage() {
 
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-medium">{entry.reference}</TableCell>
-                        <TableCell>{entry.items.length}</TableCell>
-                        <TableCell className="text-right">₹{formatAmount(totalDebit.toString())}</TableCell>
-                        <TableCell className="text-right">₹{formatAmount(totalCredit.toString())}</TableCell>
+                        <TableCell className="text-muted-foreground tabular-nums">{new Date(entry.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-semibold text-foreground">{entry.reference}</TableCell>
+                        <TableCell>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted font-medium text-foreground">
+                            {entry.items.length} {entry.items.length === 1 ? "line" : "lines"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-foreground tabular-nums">
+                          ₹{formatAmount(totalDebit.toString())}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-foreground tabular-nums">
+                          ₹{formatAmount(totalCredit.toString())}
+                        </TableCell>
                       </TableRow>
                     );
                   })}

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
@@ -131,11 +132,11 @@ export default function JournalsPage() {
 
       {!isLoading && !isError && paginatedData.length > 0 && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+          <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Name</TableHead>
+                <TableRow>
+                  <TableHead>Journal Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Default Account</TableHead>
                 </TableRow>
@@ -143,27 +144,25 @@ export default function JournalsPage() {
               <TableBody>
                 {paginatedData.map((journal) => (
                   <TableRow key={journal.id}>
-                    <TableCell className="font-medium">{journal.name}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{journal.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {journal.type}
-                      </Badge>
+                      <StatusBadge status={journal.type} showDot={false} size="sm" />
                     </TableCell>
-                    <TableCell className="text-right text-muted-foreground">{accountNameFor(journal.defaultAccountId)}</TableCell>
+                    <TableCell className="text-right font-medium text-foreground">{accountNameFor(journal.defaultAccountId)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
 
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       )}
     </div>
