@@ -58,6 +58,9 @@ interface PayCustomerInvoiceInput {
   date: Date;
 }
 
+// Mirror of payVendorBill above, but against a CustomerInvoice - money
+// coming in (RECEIPT) instead of going out (PAYMENT). Same overpayment
+// guard and PARTIALLY_PAID/PAID status logic.
 export async function payCustomerInvoice(invoiceId: string, input: PayCustomerInvoiceInput) {
   const invoice = await prisma.customerInvoice.findUnique({
     where: { id: invoiceId },

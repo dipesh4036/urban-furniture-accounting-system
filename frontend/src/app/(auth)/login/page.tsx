@@ -4,19 +4,30 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { login } from "@/features/auth/services/auth.service";
 import { loginSchema, type LoginFormValues } from "@/features/auth/validators/auth.validator";
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const { isAuthenticated, isLoading: isCheckingSession } = useAuth();
+
+  // Landing here with a session that's still valid (e.g. pressing Back
+  // to a bfcache'd login page, then refreshing it) should skip straight
+  // to the dashboard instead of showing the form again.
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, router]);
 
   const {
     register,
@@ -33,6 +44,17 @@ export default function LoginPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed");
     }
+  }
+
+  // Skip rendering the form at all while we don't yet know if there's a
+  // valid session, or once we do and a redirect to /dashboard is already
+  // under way - otherwise the login form flashes for a moment first.
+  if (isCheckingSession || isAuthenticated) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner className="size-6" />
+      </div>
+    );
   }
 
   return (
