@@ -30,6 +30,7 @@ model User {
   resetTokenExpiresAt DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+  budgets             Budget[]
 
   @@map("users")
 }
@@ -157,6 +158,7 @@ enum DocStatus {
 }
 
 enum PaymentType {
+  RECEIPT
   PAYMENT
   REFUND
 }
@@ -209,6 +211,46 @@ model Contact {
   @@map("contacts")
 }
 
+enum AnalyticType {
+  INCOME
+  EXPENSE
+}
+
+// A cost/revenue center (e.g. "Marketing", "Warehouse Ops") that Budgets
+// are tracked against, independent of the Chart of Accounts. See plan.md
+// Module 11.
+model AnalyticAccount {
+  id        String       @id @default(cuid())
+  name      String
+  type      AnalyticType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  budgets   Budget[]
+
+  @@map("analytic_accounts")
+}
+
+// A planned amount for an AnalyticAccount over a period (e.g.
+// "2026-Q1"), owned by a staff User. onDelete: Restrict on both FKs
+// means an AnalyticAccount or User can't be deleted while a Budget
+// still references it. See plan.md Module 11.
+model Budget {
+  id                  String          @id @default(cuid())
+  name                String
+  period              String
+  plannedAmount       Decimal         @db.Decimal(10, 2)
+  analyticAccountId   String
+  analyticAccount     AnalyticAccount @relation(fields: [analyticAccountId], references: [id], onDelete: Restrict)
+  responsiblePersonId String
+  responsiblePerson   User            @relation(fields: [responsiblePersonId], references: [id], onDelete: Restrict)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([analyticAccountId])
+  @@index([responsiblePersonId])
+  @@map("budgets")
+}
+
 model PurchaseOrder {
   id        String              @id @default(cuid())
   poNumber  String              @unique
@@ -259,6 +301,37 @@ model VendorBill {
   @@map("vendor_bills")
 }
 
+model SalesOrder {
+  id        String           @id @default(cuid())
+  soNumber  String           @unique
+  customerId String
+  customer  Contact          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  date      DateTime
+  status    OrderStatus      @default(DRAFT)
+  items     SalesOrderItem[]
+  invoice   CustomerInvoice?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  tax          Decimal    @db.Decimal(10, 2) @default(0)
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
 model CustomerInvoice {
   id            String      @id @default(cuid())
   invoiceNumber String      @unique
@@ -298,33 +371,3 @@ model Payment {
   @@map("payments")
 }
 
-model SalesOrder {
-  id        String           @id @default(cuid())
-  soNumber  String           @unique
-  customerId String
-  customer  Contact          @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  date      DateTime
-  status    OrderStatus      @default(DRAFT)
-  items     SalesOrderItem[]
-  invoice   CustomerInvoice?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  @@index([customerId])
-  @@map("sales_orders")
-}
-
-model SalesOrderItem {
-  id           String     @id @default(cuid())
-  salesOrderId String
-  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  productId    String
-  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity     Int
-  unitPrice    Decimal    @db.Decimal(10, 2)
-  tax          Decimal    @db.Decimal(10, 2) @default(0)
-
-  @@index([salesOrderId])
-  @@index([productId])
-  @@map("sales_order_items")
-}
