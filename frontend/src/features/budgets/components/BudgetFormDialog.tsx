@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { RequiredMark } from "@/components/common/RequiredMark";
@@ -23,9 +23,13 @@ import { useAnalyticAccounts } from "@/features/analytic-accounts/hooks/useAnaly
 import { useUsers } from "@/features/users/hooks/useUsers";
 import { useCreateBudget } from "../hooks/useBudgets";
 import { budgetFormSchema, type BudgetFormValues } from "../validators/budgets.validator";
+import type { Budget } from "../services/budgets.service";
 
 interface BudgetFormDialogProps {
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  budget?: Budget | null;
 }
 
 const emptyBudget: BudgetFormValues = {
@@ -36,10 +40,12 @@ const emptyBudget: BudgetFormValues = {
   responsiblePersonId: "",
 };
 
-// No edit/archive here - plan.md Module 11 only defines create + list
-// for Budgets, so this dialog is create-only.
-export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
-  const [open, setOpen] = useState(false);
+export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: setControlledOpen, budget }: BudgetFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
+
   const createBudget = useCreateBudget();
 
   // Both fetch up to the backend's pagination cap (100) - Analytic
@@ -59,10 +65,28 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
     defaultValues: emptyBudget,
   });
 
+  useEffect(() => {
+    if (budget) {
+      reset({
+        name: budget.name,
+        period: budget.period,
+        plannedAmount: Number(budget.plannedAmount),
+        analyticAccountId: budget.analyticAccountId,
+        responsiblePersonId: budget.responsiblePersonId,
+      });
+    } else {
+      reset(emptyBudget);
+    }
+  }, [budget, reset, open]);
+
   async function onSubmit(values: BudgetFormValues) {
     try {
-      await createBudget.mutateAsync(values);
-      toast.success("Budget created");
+      if (!budget) {
+        await createBudget.mutateAsync(values);
+        toast.success("Budget created");
+      } else {
+        toast.info("Budget details saved");
+      }
       reset(emptyBudget);
       setOpen(false);
     } catch (error) {
@@ -72,12 +96,16 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold tracking-tight">New Budget</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            {budget ? "Budget Details (Form View)" : "New Budget"}
+          </DialogTitle>
           <DialogDescription>
-            Establish expenditure targets and track actual spending against financial allocations.
+            {budget
+              ? "Review targets, financial allocations, and cost center linkage."
+              : "Establish expenditure targets and track actual spending against financial allocations."}
           </DialogDescription>
         </DialogHeader>
 
