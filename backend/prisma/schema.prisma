@@ -152,10 +152,10 @@ enum ContactType {
 // which triggers an activation email so the Contact can set their own
 // password and log in to the portal. See plan.md Module 6.
 model Contact {
-  id                       String      @id @default(cuid())
+  id                       String            @id @default(cuid())
   name                     String
   type                     ContactType
-  email                    String      @unique
+  email                    String            @unique
   mobile                   String
   city                     String
   state                    String
@@ -164,15 +164,97 @@ model Contact {
   // the image itself - see POST /uploads and profileImageSchema.
   profileImage             String?
   passwordHash             String? // null until the Contact activates their account
-  isActivated              Boolean     @default(false)
+  isActivated              Boolean           @default(false)
   activationToken          String?
   activationTokenExpiresAt DateTime?
   resetToken               String?
   resetTokenExpiresAt      DateTime?
-  isActive                 Boolean     @default(true)
-  createdAt                DateTime    @default(now())
-  updatedAt                DateTime    @updatedAt
+  isActive                 Boolean           @default(true)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  vendorBills              VendorBill[]
+  customerInvoices         CustomerInvoice[]
 
   @@index([type])
   @@map("contacts")
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  BILLED
+  CANCELLED
+}
+
+enum DocStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+enum PaymentType {
+  RECEIPT
+  PAYMENT
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+}
+
+model VendorBill {
+  id              String        @id @default(cuid())
+  billNumber      String        @unique
+  purchaseOrderId String        @unique
+  vendorId        String
+  vendor          Contact       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  invoiceDate     DateTime
+  dueDate         DateTime
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  status          DocStatus     @default(UNPAID)
+  payments        Payment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+  @@map("vendor_bills")
+}
+
+model CustomerInvoice {
+  id            String      @id @default(cuid())
+  invoiceNumber String      @unique
+  salesOrderId  String      @unique
+  customerId    String
+  customer      Contact     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceDate   DateTime
+  dueDate       DateTime
+  totalAmount   Decimal     @db.Decimal(10, 2)
+  status        DocStatus   @default(UNPAID)
+  emailSentAt   DateTime?
+  payments      Payment[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@map("customer_invoices")
+}
+
+model Payment {
+  id                String           @id @default(cuid())
+  type              PaymentType
+  method            PaymentMethod
+  amount            Decimal          @db.Decimal(10, 2)
+  date              DateTime
+  vendorBillId      String?
+  vendorBill        VendorBill?      @relation(fields: [vendorBillId], references: [id], onDelete: Restrict)
+  customerInvoiceId String?
+  customerInvoice   CustomerInvoice? @relation(fields: [customerInvoiceId], references: [id], onDelete: Restrict)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([vendorBillId])
+  @@index([customerInvoiceId])
+  @@map("payments")
 }
