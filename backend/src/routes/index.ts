@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { accountsRouter } from "./accounts.routes";
+import { analyticAccountsRouter } from "./analytic-accounts.routes";
 import { authRouter } from "./auth.routes";
+import { budgetsRouter } from "./budgets.routes";
 import { contactsRouter } from "./contacts.routes";
 import { journalEntriesRouter } from "./journal-entries.routes";
 import { journalsRouter } from "./journals.routes";
@@ -23,6 +25,8 @@ apiRouter.use("/products", productsRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/journals", journalsRouter);
 apiRouter.use("/journal-entries", journalEntriesRouter);
+apiRouter.use("/analytic-accounts", analyticAccountsRouter);
+apiRouter.use("/budgets", budgetsRouter);
 apiRouter.use("/payments", paymentsRouter);
 apiRouter.use("/purchase-orders", purchaseOrdersRouter);
 apiRouter.use("/vendor-bills", vendorBillsRouter);
