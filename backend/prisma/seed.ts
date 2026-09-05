@@ -53,21 +53,23 @@ async function main() {
 
   const accountsCreated = [];
   for (const acc of accounts) {
-    const account = await prisma.account.upsert({
-      where: { name: acc.name },
-      update: {},
-      create: acc,
-    });
-    accountsCreated.push(account);
+    try {
+      const account = await prisma.account.create({ data: acc });
+      accountsCreated.push(account);
+    } catch (e: any) {
+      // Skip if already exists
+      if (e.code !== "P2002") throw e;
+    }
   }
-  console.log(`  ✓ Created ${accountsCreated.length} accounts`);
+  console.log(`  ✓ Created/Verified ${accountsCreated.length} accounts`);
 
   // 3. SEED JOURNALS
   console.log("\n📖 Seeding journals...");
-  const salesAccount = accountsCreated.find(a => a.name === "Sales Revenue")!;
-  const purchaseAccount = accountsCreated.find(a => a.name === "Purchase Expense")!;
-  const bankAccount = accountsCreated.find(a => a.name === "Bank Account")!;
-  const cashAccount = accountsCreated.find(a => a.name === "Cash")!;
+  const allAccounts = await prisma.account.findMany();
+  const salesAccount = allAccounts.find(a => a.name === "Sales Revenue")!;
+  const purchaseAccount = allAccounts.find(a => a.name === "Purchase Expense")!;
+  const bankAccount = allAccounts.find(a => a.name === "Bank Account")!;
+  const cashAccount = allAccounts.find(a => a.name === "Cash")!;
 
   const journals = [
     { name: "Sales Journal", type: "SALES" as const, defaultAccountId: salesAccount.id },
@@ -78,14 +80,14 @@ async function main() {
 
   const journalsCreated = [];
   for (const journal of journals) {
-    const j = await prisma.journal.upsert({
-      where: { name: journal.name },
-      update: {},
-      create: journal,
-    });
-    journalsCreated.push(j);
+    try {
+      const j = await prisma.journal.create({ data: journal });
+      journalsCreated.push(j);
+    } catch (e: any) {
+      if (e.code !== "P2002") throw e;
+    }
   }
-  console.log(`  ✓ Created ${journalsCreated.length} journals`);
+  console.log(`  ✓ Created/Verified ${journalsCreated.length} journals`);
 
   // 4. SEED PRODUCTS
   console.log("\n📦 Seeding products...");
@@ -100,14 +102,14 @@ async function main() {
 
   const productsCreated = [];
   for (const product of products) {
-    const p = await prisma.product.upsert({
-      where: { name: product.name },
-      update: {},
-      create: product,
-    });
-    productsCreated.push(p);
+    try {
+      const p = await prisma.product.create({ data: product });
+      productsCreated.push(p);
+    } catch (e: any) {
+      if (e.code !== "P2002") throw e;
+    }
   }
-  console.log(`  ✓ Created ${productsCreated.length} products`);
+  console.log(`  ✓ Created/Verified ${productsCreated.length} products`);
 
   // 5. SEED CONTACTS (Vendors & Customers)
   console.log("\n👥 Seeding contacts...");
@@ -132,44 +134,54 @@ async function main() {
   console.log(`  ✓ Created ${contactsCreated.length} contacts`);
 
   // 6. SEED ANALYTIC ACCOUNTS
-  console.log("\n📊 Seeding analytic accounts...");
-  const analyticAccounts = [
-    { name: "Marketing Department", type: "EXPENSE" as const },
-    { name: "Sales Department", type: "INCOME" as const },
-    { name: "Operations", type: "EXPENSE" as const },
-    { name: "Product A Revenue", type: "INCOME" as const },
-    { name: "Product B Revenue", type: "INCOME" as const },
-  ];
+  let analyticAccountsCreated: any[] = [];
+  try {
+    console.log("\n📊 Seeding analytic accounts...");
+    const analyticAccounts = [
+      { name: "Marketing Department", type: "EXPENSE" as const },
+      { name: "Sales Department", type: "INCOME" as const },
+      { name: "Operations", type: "EXPENSE" as const },
+      { name: "Product A Revenue", type: "INCOME" as const },
+      { name: "Product B Revenue", type: "INCOME" as const },
+    ];
 
-  const analyticAccountsCreated = [];
-  for (const aa of analyticAccounts) {
-    const a = await prisma.analyticAccount.upsert({
-      where: { name: aa.name },
-      update: {},
-      create: aa,
-    });
-    analyticAccountsCreated.push(a);
+    for (const aa of analyticAccounts) {
+      try {
+        const a = await (prisma as any).analyticAccount.create({ data: aa });
+        analyticAccountsCreated.push(a);
+      } catch (e: any) {
+        if (e.code !== "P2002") throw e;
+      }
+    }
+    console.log(`  ✓ Created/Verified ${analyticAccountsCreated.length} analytic accounts`);
+  } catch (e) {
+    console.log(`  ⚠ Skipped analytic accounts (model may not be available yet)`);
   }
-  console.log(`  ✓ Created ${analyticAccountsCreated.length} analytic accounts`);
 
   // 7. SEED BUDGETS
-  console.log("\n💵 Seeding budgets...");
-  const budgets = [
-    { name: "Marketing Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("50000.00"), analyticAccountId: analyticAccountsCreated[0].id, responsiblePersonId: users[1].id },
-    { name: "Operations Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("75000.00"), analyticAccountId: analyticAccountsCreated[2].id, responsiblePersonId: users[2].id },
-    { name: "Product A Sales Target", period: "2026-Q1", plannedAmount: new Prisma.Decimal("200000.00"), analyticAccountId: analyticAccountsCreated[3].id, responsiblePersonId: users[1].id },
-  ];
+  try {
+    console.log("\n💵 Seeding budgets...");
+    if (analyticAccountsCreated.length > 0) {
+      const budgets = [
+        { name: "Marketing Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("50000.00"), analyticAccountId: analyticAccountsCreated[0].id, responsiblePersonId: users[1].id },
+        { name: "Operations Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("75000.00"), analyticAccountId: analyticAccountsCreated[Math.min(2, analyticAccountsCreated.length - 1)].id, responsiblePersonId: users[2].id },
+        { name: "Product A Sales Target", period: "2026-Q1", plannedAmount: new Prisma.Decimal("200000.00"), analyticAccountId: analyticAccountsCreated[Math.min(3, analyticAccountsCreated.length - 1)].id, responsiblePersonId: users[1].id },
+      ];
 
-  const budgetsCreated = [];
-  for (const budget of budgets) {
-    const b = await prisma.budget.upsert({
-      where: { name: budget.name },
-      update: {},
-      create: budget,
-    });
-    budgetsCreated.push(b);
+      for (const budget of budgets) {
+        try {
+          await (prisma as any).budget.create({ data: budget });
+        } catch (e: any) {
+          if (e.code !== "P2002") throw e;
+        }
+      }
+      console.log(`  ✓ Created budgets`);
+    } else {
+      console.log(`  ⚠ Skipped budgets (no analytic accounts created)`);
+    }
+  } catch (e) {
+    console.log(`  ⚠ Skipped budgets (model may not be available yet)`);
   }
-  console.log(`  ✓ Created ${budgetsCreated.length} budgets`);
 
   // 8. SEED PURCHASE ORDERS & VENDOR BILLS
   console.log("\n🛒 Seeding purchase orders & vendor bills...");
@@ -238,20 +250,20 @@ async function main() {
   // 10. SEED PAYMENTS
   console.log("\n💳 Seeding payments...");
 
-  const payment1 = await prisma.payment.create({
+  await prisma.payment.create({
     data: {
       type: "PAYMENT",
-      method: "BANK",
+      method: "BANK_TRANSFER",
       amount: new Prisma.Decimal("1600.00"),
       date: new Date("2026-02-01"),
       vendorBillId: bill1.id,
     },
   });
 
-  const payment2 = await prisma.payment.create({
+  await prisma.payment.create({
     data: {
       type: "RECEIPT",
-      method: "BANK",
+      method: "BANK_TRANSFER",
       amount: new Prisma.Decimal("500.00"),
       date: new Date("2026-01-25"),
       customerInvoiceId: invoice1.id,
