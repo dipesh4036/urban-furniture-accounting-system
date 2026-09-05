@@ -45,8 +45,8 @@ export default function ContactsPage() {
 
         <ContactFormDialog
           trigger={
-            <Button>
-              <Plus className="size-4" />
+            <Button size="sm">
+              <Plus className="mr-2 size-4" />
               New Contact
             </Button>
           }
@@ -73,7 +73,14 @@ export default function ContactsPage() {
       {!isLoading && !isError && data && data.contacts.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No contacts yet.</p>
-          <ContactFormDialog trigger={<Button>Create your first contact</Button>} />
+          <ContactFormDialog
+            trigger={
+              <Button size="sm" variant="outline">
+                <Plus className="mr-2 size-4" />
+                Create your first contact
+              </Button>
+            }
+          />
         </div>
       )}
 
