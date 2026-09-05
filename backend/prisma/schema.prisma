@@ -56,3 +56,37 @@ model Account {
   @@index([type])
   @@map("accounts")
 }
+
+enum ContactType {
+  CUSTOMER
+  VENDOR
+  BOTH
+}
+
+// Customers and vendors. Unlike User (staff), a Contact is never created
+// via public self-signup - an Admin/Accountant creates the record here,
+// which triggers an activation email so the Contact can set their own
+// password and log in to the portal. See plan.md Module 6.
+model Contact {
+  id                      String    @id @default(cuid())
+  name                    String
+  type                    ContactType
+  email                   String    @unique
+  mobile                  String
+  city                    String
+  state                   String
+  pincode                 String
+  profileImage            String?
+  passwordHash            String?   // null until the Contact activates their account
+  isActivated             Boolean   @default(false)
+  activationToken         String?
+  activationTokenExpiresAt DateTime?
+  resetToken              String?
+  resetTokenExpiresAt     DateTime?
+  isActive                Boolean   @default(true)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([type])
+  @@map("contacts")
+}
