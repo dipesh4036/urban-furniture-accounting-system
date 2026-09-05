@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { login } from "@/features/auth/services/auth.service";
 import { loginSchema, type LoginFormValues } from "@/features/auth/validators/auth.validator";
 
@@ -53,12 +54,7 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/forgot-password" className="text-sm font-medium underline underline-offset-4">
-              Forgot password?
-            </Link>
-          </div>
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Input
               id="password"
@@ -78,9 +74,13 @@ export default function LoginPage() {
             </button>
           </div>
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          <Link href="/forgot-password" className="self-end text-sm font-medium underline underline-offset-4">
+            Forgot password?
+          </Link>
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="h-10 mt-2">
+          {isSubmitting && <Spinner />}
           {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>

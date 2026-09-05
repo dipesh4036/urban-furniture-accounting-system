@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccountFormDialog } from "@/features/accounts/components/AccountFormDialog";
 import { useAccounts, useUpdateAccount } from "@/features/accounts/hooks/useAccounts";
@@ -43,10 +43,8 @@ export default function AccountsPage() {
       </div>
 
       {isLoading && (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+        <div className="flex justify-center py-12">
+          <Spinner className="size-6" />
         </div>
       )}
 

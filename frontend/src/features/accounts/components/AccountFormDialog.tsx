@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { useCreateAccount, useUpdateAccount } from "../hooks/useAccounts";
 import type { Account, AccountType } from "../services/accounts.service";
 import { accountFormSchema, accountTypes, type AccountFormValues } from "../validators/accounts.validator";
@@ -125,6 +126,7 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
 
           <DialogFooter>
             <Button type="submit" disabled={isSaving}>
+              {isSaving && <Spinner />}
               {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
