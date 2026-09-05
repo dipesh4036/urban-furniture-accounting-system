@@ -135,6 +135,7 @@ model Product {
   salesPrice           Decimal               @db.Decimal(10, 2)
   costPrice            Decimal               @db.Decimal(10, 2)
   category             String
+  image                String?
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -158,12 +159,17 @@ enum DocStatus {
 }
 
 enum PaymentType {
-  RECEIPT
   PAYMENT
+  RECEIPT
+  REFUND
 }
 
 enum PaymentMethod {
+  BANK_TRANSFER
+  CHEQUE
   CASH
+  CARD
+  ONLINE
   BANK
 }
 

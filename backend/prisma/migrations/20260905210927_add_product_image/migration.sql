@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `payments` MODIFY `type` ENUM('PAYMENT', 'RECEIPT', 'REFUND') NOT NULL,
+    MODIFY `method` ENUM('BANK_TRANSFER', 'CHEQUE', 'CASH', 'CARD', 'ONLINE', 'BANK') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `products` ADD COLUMN `image` VARCHAR(191) NULL;

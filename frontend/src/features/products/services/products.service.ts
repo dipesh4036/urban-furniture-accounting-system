@@ -10,6 +10,7 @@ export interface Product {
   salesPrice: string;
   costPrice: string;
   category: string;
+  image?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +41,7 @@ export interface CreateProductInput {
   salesPrice: number;
   costPrice: number;
   category: string;
+  image?: string | null;
 }
 
 export interface UpdateProductInput {
@@ -48,6 +50,7 @@ export interface UpdateProductInput {
   salesPrice?: number;
   costPrice?: number;
   category?: string;
+  image?: string | null;
   isActive?: boolean;
 }
 

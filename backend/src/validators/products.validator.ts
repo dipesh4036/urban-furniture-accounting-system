@@ -2,12 +2,23 @@ import { z } from "zod";
 
 const productTypeSchema = z.enum(["GOODS", "SERVICE", "COMBO"]);
 
+// An image is a path returned by POST /uploads (e.g. "/uploads/<name>.jpg"),
+// a full URL, or a base64 data URI.
+const imageSchema = z
+  .string()
+  .refine(
+    (value) =>
+      value.startsWith("/uploads/") || value.startsWith("data:image/") || z.string().url().safeParse(value).success,
+    "Image must be a valid URL or uploaded file path"
+  );
+
 export const createProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
   type: productTypeSchema,
   salesPrice: z.number().positive("Sales price must be greater than 0"),
   costPrice: z.number().positive("Cost price must be greater than 0"),
   category: z.string().min(1, "Category is required"),
+  image: imageSchema.optional().nullable(),
 });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
@@ -17,6 +28,7 @@ export const updateProductSchema = z.object({
   salesPrice: z.number().positive("Sales price must be greater than 0").optional(),
   costPrice: z.number().positive("Cost price must be greater than 0").optional(),
   category: z.string().min(1, "Category is required").optional(),
+  image: imageSchema.optional().nullable(),
   isActive: z.boolean().optional(),
 });
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
