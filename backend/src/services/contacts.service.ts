@@ -138,3 +138,33 @@ export async function archiveContact(id: string) {
 
   return prisma.contact.update({ where: { id }, data: { isActive: false }, select: safeContactSelect });
 }
+
+export async function resendActivationEmail(id: string) {
+  const contact = await prisma.contact.findUnique({ where: { id } });
+  if (!contact) {
+    throw new AppError(404, "Contact not found", "CONTACT_NOT_FOUND");
+  }
+  if (contact.isActivated) {
+    throw new AppError(400, "This contact account has already been activated", "ALREADY_ACTIVATED");
+  }
+
+  const activationToken = crypto.randomBytes(32).toString("hex");
+  const activationTokenExpiresAt = new Date(Date.now() + ACTIVATION_TOKEN_EXPIRY_MS);
+
+  await prisma.contact.update({
+    where: { id },
+    data: { activationToken, activationTokenExpiresAt },
+  });
+
+  const emailSent = await sendActivationEmail({
+    email: contact.email,
+    name: contact.name,
+    activationToken,
+  });
+
+  if (!emailSent) {
+    throw new AppError(500, "Failed to send activation email. Please check server SMTP configuration.", "EMAIL_SEND_FAILED");
+  }
+
+  return { message: "Activation email sent successfully" };
+}

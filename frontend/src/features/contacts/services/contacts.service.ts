@@ -86,3 +86,8 @@ export function createContact(input: CreateContactInput): Promise<{ contact: Con
 export function updateContact(id: string, input: UpdateContactInput): Promise<{ contact: Contact }> {
   return api.patch(`/contacts/${id}`, input);
 }
+
+// Calls POST /contacts/:id/resend-activation to resend the activation email.
+export function resendActivationEmail(id: string): Promise<void> {
+  return api.post(`/contacts/${id}/resend-activation`);
+}

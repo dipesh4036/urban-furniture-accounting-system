@@ -3,6 +3,7 @@ import {
   createContact,
   getContactById,
   listContacts,
+  resendActivationEmail,
   updateContact,
   type CreateContactInput,
   type ListContactsParams,
@@ -50,6 +51,18 @@ export function useUpdateContact() {
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts", "list"] });
       queryClient.invalidateQueries({ queryKey: contactDetailKey(variables.id) });
+    },
+  });
+}
+
+export function useResendActivationEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => resendActivationEmail(id),
+    onSuccess: (_result, id) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts", "list"] });
+      queryClient.invalidateQueries({ queryKey: contactDetailKey(id) });
     },
   });
 }

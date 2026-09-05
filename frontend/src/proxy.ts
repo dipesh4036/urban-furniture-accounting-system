@@ -68,6 +68,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/portal/invoices", request.url));
   }
 
+  // /users is strictly restricted to ADMIN role. Non-admin staff (Accountants) are redirected to /dashboard.
+  if (pathname === "/users" || pathname.startsWith("/users/")) {
+    if (role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 

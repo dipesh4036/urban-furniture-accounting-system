@@ -1,16 +1,33 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CreateUserForm } from "@/features/users/components/CreateUserForm";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { UserFormDialog } from "@/features/users/components/UserFormDialog";
 import { useUpdateUser, useUsers } from "@/features/users/hooks/useUsers";
 
 export default function UsersPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
   const { data, isLoading, isError, refetch } = useUsers();
   const updateUser = useUpdateUser();
+
+  // Role guard: Non-admins (e.g. Accountants) cannot view or manage users
+  useEffect(() => {
+    if (!isAuthLoading && user && user.role !== "ADMIN") {
+      router.replace("/dashboard");
+    }
+  }, [user, isAuthLoading, router]);
+
+  if (!isAuthLoading && user && user.role !== "ADMIN") {
+    return null;
+  }
 
   // Deactivating/reactivating is just PATCH /users/:id with { isActive }
   // - there's no separate endpoint for it (see users.service.ts).
@@ -24,10 +41,21 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">Staff accounts (Admin and Accountant).</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Create User</h1>
+          <p className="text-sm text-muted-foreground">Manage and provision staff accounts (Admin and Accountant).</p>
+        </div>
+
+        <UserFormDialog
+          trigger={
+            <Button size="sm">
+              <Plus className="mr-2 size-4" />
+              Create User
+            </Button>
+          }
+        />
       </div>
 
       {isLoading && (
@@ -48,9 +76,10 @@ export default function UsersPage() {
       )}
 
       {!isLoading && !isError && data && data.users.length === 0 && (
-        <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-          No staff users yet. Create the first one below.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
+          <p className="text-sm text-muted-foreground">No staff users yet.</p>
+          <UserFormDialog trigger={<Button>Create your first user</Button>} />
+        </div>
       )}
 
       {!isLoading && !isError && data && data.users.length > 0 && (
@@ -92,8 +121,6 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       )}
-
-      <CreateUserForm />
     </div>
   );
 }

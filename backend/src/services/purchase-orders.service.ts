@@ -183,3 +183,19 @@ export async function convertPurchaseOrderToBill(
     });
   });
 }
+
+export async function confirmPurchaseOrder(id: string) {
+  const po = await prisma.purchaseOrder.findUnique({ where: { id } });
+  if (!po) {
+    throw new AppError(404, "Purchase order not found", "PURCHASE_ORDER_NOT_FOUND");
+  }
+  if (po.status !== "DRAFT") {
+    throw new AppError(422, `Only DRAFT purchase orders can be confirmed, current status: ${po.status}`, "INVALID_PO_STATUS");
+  }
+  return prisma.purchaseOrder.update({
+    where: { id },
+    data: { status: "CONFIRMED" },
+    include: { items: true, vendor: true },
+  });
+}
+

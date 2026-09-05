@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -70,24 +71,32 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Analytic Account</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Analytic Account</DialogTitle>
+          <DialogDescription>
+            Track revenues and expenditures by cost center, department, or project.
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-2 flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">
-              Name
+              Analytic Account Name
               <RequiredMark />
             </Label>
-            <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            <Input
+              id="name"
+              placeholder="e.g. Design Studio, Marketing Project, Warehouse Ops"
+              aria-invalid={!!errors.name}
+              {...register("name")}
+            />
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="type">
-              Type
+              Tracking Category
               <RequiredMark />
             </Label>
             <Controller
@@ -96,7 +105,7 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
-                    <SelectValue placeholder="Select a type" />
+                    <SelectValue placeholder="Select tracking category" />
                   </SelectTrigger>
                   <SelectContent>
                     {analyticTypes.map((type) => (
@@ -108,13 +117,21 @@ export function AnalyticAccountFormDialog({ trigger }: AnalyticAccountFormDialog
                 </Select>
               )}
             />
-            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
+            {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createAnalyticAccount.isPending}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={createAnalyticAccount.isPending}>
-              {createAnalyticAccount.isPending && <Spinner />}
-              {createAnalyticAccount.isPending ? "Saving..." : "Save"}
+              {createAnalyticAccount.isPending && <Spinner className="mr-2 size-4" />}
+              {createAnalyticAccount.isPending ? "Saving..." : "Create Account"}
             </Button>
           </DialogFooter>
         </form>

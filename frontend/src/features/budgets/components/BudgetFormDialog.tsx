@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -72,34 +73,49 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Budget</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Budget</DialogTitle>
+          <DialogDescription>
+            Establish expenditure targets and track actual spending against financial allocations.
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">
-              Name
-              <RequiredMark />
-            </Label>
-            <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="period">
-                Period
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-2 flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="name">
+                Budget Title
                 <RequiredMark />
               </Label>
-              <Input id="period" placeholder="e.g. 2026-Q1" aria-invalid={!!errors.period} {...register("period")} />
-              {errors.period && <p className="text-sm text-destructive">{errors.period.message}</p>}
+              <Input
+                id="name"
+                placeholder="e.g. Q1 Marketing Budget"
+                aria-invalid={!!errors.name}
+                {...register("name")}
+              />
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="period">
+                Fiscal Period
+                <RequiredMark />
+              </Label>
+              <Input
+                id="period"
+                placeholder="e.g. 2026-Q1 or 2026-FY"
+                aria-invalid={!!errors.period}
+                {...register("period")}
+              />
+              {errors.period && <p className="text-xs text-destructive">{errors.period.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="plannedAmount">
-                Planned Amount
+                Planned Allocation ($)
                 <RequiredMark />
               </Label>
               <Input
@@ -107,55 +123,50 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="0.00"
                 aria-invalid={!!errors.plannedAmount}
                 {...register("plannedAmount", { valueAsNumber: true })}
               />
-              {errors.plannedAmount && <p className="text-sm text-destructive">{errors.plannedAmount.message}</p>}
+              {errors.plannedAmount && <p className="text-xs text-destructive">{errors.plannedAmount.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="analyticAccountId">
+                Cost Center (Analytic Account)
+                <RequiredMark />
+              </Label>
+              <Controller
+                control={control}
+                name="analyticAccountId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="analyticAccountId" className="w-full" aria-invalid={!!errors.analyticAccountId}>
+                      <SelectValue placeholder={isLoadingAnalyticAccounts ? "Loading..." : "Select cost center"}>
+                        {(selectedId: string) =>
+                          analyticAccountsData?.analyticAccounts.find((a) => a.id === selectedId)?.name ??
+                          (isLoadingAnalyticAccounts ? "Loading..." : "Select cost center")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {analyticAccountsData?.analyticAccounts.map((analyticAccount) => (
+                        <SelectItem key={analyticAccount.id} value={analyticAccount.id}>
+                          {analyticAccount.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.analyticAccountId && (
+                <p className="text-xs text-destructive">{errors.analyticAccountId.message}</p>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="analyticAccountId">
-              Analytic Account
-              <RequiredMark />
-            </Label>
-            <Controller
-              control={control}
-              name="analyticAccountId"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="analyticAccountId" className="w-full" aria-invalid={!!errors.analyticAccountId}>
-                    {/*
-                      SelectValue only shows a label by matching the value
-                      against a render function - it doesn't read
-                      SelectItem's children, or it prints the raw id
-                      instead (see base-ui-select-label-bug).
-                    */}
-                    <SelectValue placeholder={isLoadingAnalyticAccounts ? "Loading..." : "Select an analytic account"}>
-                      {(selectedId: string) =>
-                        analyticAccountsData?.analyticAccounts.find((a) => a.id === selectedId)?.name ??
-                        (isLoadingAnalyticAccounts ? "Loading..." : "Select an analytic account")
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {analyticAccountsData?.analyticAccounts.map((analyticAccount) => (
-                      <SelectItem key={analyticAccount.id} value={analyticAccount.id}>
-                        {analyticAccount.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.analyticAccountId && (
-              <p className="text-sm text-destructive">{errors.analyticAccountId.message}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="responsiblePersonId">
-              Responsible Person
+              Budget Owner / Manager
               <RequiredMark />
             </Label>
             <Controller
@@ -164,10 +175,10 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger id="responsiblePersonId" className="w-full" aria-invalid={!!errors.responsiblePersonId}>
-                    <SelectValue placeholder={isLoadingUsers ? "Loading..." : "Select a responsible person"}>
+                    <SelectValue placeholder={isLoadingUsers ? "Loading..." : "Select responsible manager"}>
                       {(selectedId: string) =>
                         usersData?.users.find((user) => user.id === selectedId)?.name ??
-                        (isLoadingUsers ? "Loading..." : "Select a responsible person")
+                        (isLoadingUsers ? "Loading..." : "Select responsible manager")
                       }
                     </SelectValue>
                   </SelectTrigger>
@@ -182,14 +193,22 @@ export function BudgetFormDialog({ trigger }: BudgetFormDialogProps) {
               )}
             />
             {errors.responsiblePersonId && (
-              <p className="text-sm text-destructive">{errors.responsiblePersonId.message}</p>
+              <p className="text-xs text-destructive">{errors.responsiblePersonId.message}</p>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createBudget.isPending}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={createBudget.isPending}>
-              {createBudget.isPending && <Spinner />}
-              {createBudget.isPending ? "Saving..." : "Save"}
+              {createBudget.isPending && <Spinner className="mr-2 size-4" />}
+              {createBudget.isPending ? "Saving..." : "Create Budget"}
             </Button>
           </DialogFooter>
         </form>

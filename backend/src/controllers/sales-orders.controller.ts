@@ -45,3 +45,15 @@ export const generateInvoiceFromSalesOrderController = asyncHandler(async (req: 
     timestamp: new Date().toISOString(),
   });
 });
+
+export const confirmSalesOrderController = asyncHandler(async (req: Request, res: Response) => {
+  const so = await salesOrdersService.confirmSalesOrder(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: "Sales order confirmed successfully",
+    data: { salesOrder: so },
+    timestamp: new Date().toISOString(),
+  });
+});
+

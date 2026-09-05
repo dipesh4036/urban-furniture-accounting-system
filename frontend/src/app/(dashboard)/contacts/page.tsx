@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
-import { useContacts, useUpdateContact } from "@/features/contacts/hooks/useContacts";
+import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
 import { toFileUrl } from "@/lib/api";
 
 export default function ContactsPage() {
   const { data, isLoading, isError, refetch } = useContacts();
   const updateContact = useUpdateContact();
+  const resendEmail = useResendActivationEmail();
 
   // Archiving is just PATCH /contacts/:id with { isActive: false } - there's
   // no separate archive endpoint (see contacts.service.ts).
@@ -22,6 +23,15 @@ export default function ContactsPage() {
       toast.success("Contact archived");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function handleResendEmail(id: string) {
+    try {
+      await resendEmail.mutateAsync(id);
+      toast.success("Activation email sent successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send activation email.");
     }
   }
 
@@ -35,8 +45,8 @@ export default function ContactsPage() {
 
         <ContactFormDialog
           trigger={
-            <Button>
-              <Plus className="size-4" />
+            <Button size="sm">
+              <Plus className="mr-2 size-4" />
               New Contact
             </Button>
           }
@@ -63,7 +73,14 @@ export default function ContactsPage() {
       {!isLoading && !isError && data && data.contacts.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">No contacts yet.</p>
-          <ContactFormDialog trigger={<Button>Create your first contact</Button>} />
+          <ContactFormDialog
+            trigger={
+              <Button size="sm" variant="outline">
+                <Plus className="mr-2 size-4" />
+                Create your first contact
+              </Button>
+            }
+          />
         </div>
       )}
 
@@ -107,6 +124,16 @@ export default function ContactsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
+                    {!contact.isActivated && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendEmail(contact.id)}
+                        disabled={resendEmail.isPending}
+                      >
+                        Resend Link
+                      </Button>
+                    )}
                     <ContactFormDialog contact={contact} trigger={<Button variant="outline" size="sm">Edit</Button>} />
                     {contact.isActive && (
                       <Button

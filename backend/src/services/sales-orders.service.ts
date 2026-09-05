@@ -197,3 +197,19 @@ export async function generateInvoiceFromSalesOrder(
 
   return invoice;
 }
+
+export async function confirmSalesOrder(id: string) {
+  const so = await prisma.salesOrder.findUnique({ where: { id } });
+  if (!so) {
+    throw new AppError(404, "Sales order not found", "SALES_ORDER_NOT_FOUND");
+  }
+  if (so.status !== "DRAFT") {
+    throw new AppError(422, `Only DRAFT sales orders can be confirmed, current status: ${so.status}`, "INVALID_SO_STATUS");
+  }
+  return prisma.salesOrder.update({
+    where: { id },
+    data: { status: "CONFIRMED" },
+    include: { items: true, customer: true },
+  });
+}
+

@@ -8,19 +8,6 @@ export interface KpiCard {
   variant?: "default" | "success" | "warning" | "danger";
 }
 
-export interface ReportDocOptions {
-  title: string;
-  subtitle: string;
-  category?: string;
-  asOfDate?: string;
-  kpiCards?: KpiCard[];
-}
-
-export interface TableColumnConfig {
-  align?: "left" | "center" | "right";
-  width?: number;
-}
-
 export interface AddTableOptions {
   sectionTitle?: string;
   sectionSubtitle?: string;
@@ -54,19 +41,19 @@ async function loadLogoBase64(): Promise<string | null> {
  */
 function drawVectorLogo(doc: jsPDF, x: number, y: number) {
   doc.setFillColor(24, 24, 27);
-  doc.roundedRect(x, y, 14, 14, 2.5, 2.5, "F");
+  doc.roundedRect(x, y, 13, 13, 2, 2, "F");
   doc.setTextColor(212, 160, 23);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("UF", x + 3.5, y + 9.5);
+  doc.setFontSize(8.5);
+  doc.text("UF", x + 3.2, y + 8.8);
 }
 
 /**
  * Initializes an enterprise-grade financial report PDF with:
  * - Top corporate brand ribbon & accent gold highlight
  * - High-resolution Urban Furniture logo mark
- * - Company header & metadata (GAAP/Accrual standard, timestamp, currency)
- * - Styled report title & period pill
+ * - Company header & metadata
+ * - Styled report title & period
  * - Optional Executive KPI Summary cards
  */
 export async function createReportDoc(
@@ -84,43 +71,42 @@ export async function createReportDoc(
   });
 
   const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
+  const rightX = pageWidth - 14;
 
-  // 1. Top Corporate Brand Bar
+  // 1. Top Corporate Brand Ribbon
   doc.setFillColor(24, 24, 27);
-  doc.rect(0, 0, pageWidth, 4.5, "F");
-  // Golden architectural accent strip
-  doc.setFillColor(202, 138, 4); // warm gold / amber
-  doc.rect(14, 0, 36, 4.5, "F");
+  doc.rect(0, 0, pageWidth, 4, "F");
+  doc.setFillColor(202, 138, 4); // warm gold
+  doc.rect(14, 0, 32, 4, "F");
 
-  // 2. Brand Logo & Company Info (Y: 11 - 25)
+  // 2. Brand Logo & Company Info (Y: 10 - 24)
   const logoData = await loadLogoBase64();
   if (logoData) {
     try {
-      doc.addImage(logoData, "JPEG", 14, 11, 14, 14);
+      doc.addImage(logoData, "JPEG", 14, 10, 13, 13);
     } catch {
-      drawVectorLogo(doc, 14, 11);
+      drawVectorLogo(doc, 14, 10);
     }
   } else {
-    drawVectorLogo(doc, 14, 11);
+    drawVectorLogo(doc, 14, 10);
   }
 
-  // Company Name & Tagline
+  // Company Name & Subtitle
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.setTextColor(24, 24, 27);
-  doc.text("URBAN FURNITURE", 32, 17);
+  doc.text("URBAN FURNITURE", 30, 15.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(113, 113, 122);
-  doc.text("Accounting & Enterprise Financial Intelligence", 32, 22);
+  doc.text("Enterprise Financial Intelligence", 30, 20.5);
 
   // Corporate Metadata (Right aligned)
-  const rightX = pageWidth - 14;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.setTextColor(161, 161, 170);
-  doc.text("OFFICIAL FINANCIAL RECORD", rightX, 15, { align: "right" });
+  doc.setTextColor(148, 163, 184);
+  doc.text("OFFICIAL FINANCIAL RECORD", rightX, 14, { align: "right" });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -130,47 +116,52 @@ export async function createReportDoc(
     month: "short",
     day: "numeric",
   });
-  doc.text(`Generated: ${printDate} • Standard: US GAAP / Accrual`, rightX, 19.5, { align: "right" });
-  doc.text("Reporting Currency: USD ($)", rightX, 23.5, { align: "right" });
+  doc.text(`Generated: ${printDate}`, rightX, 18, { align: "right" });
+  doc.text("US GAAP • Accrual Basis • Currency: USD ($)", rightX, 22, { align: "right" });
 
   // Thin Divider Line
   doc.setDrawColor(228, 228, 231);
-  doc.setLineWidth(0.4);
-  doc.line(14, 28, rightX, 28);
+  doc.setLineWidth(0.35);
+  doc.line(14, 26, rightX, 26);
 
-  // 3. Report Title Block (Y: 34 - 44)
+  // 3. Report Title Block (Y: 33 - 44)
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setTextColor(15, 23, 42);
-  doc.text(title, 14, 37);
+  doc.text(title, 14, 34);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text(subtitle, 14, 43);
+  doc.text(subtitle, 14, 40);
 
-  let currentY = 48;
+  let currentY = 46;
 
   // 4. Executive KPI Summary Cards
   if (options?.kpiCards && options.kpiCards.length > 0) {
     currentY = addKpiCards(doc, currentY, options.kpiCards);
   }
 
+  // Store starting Y for the first table
+  (doc as any).contentStartY = currentY;
+
   return doc;
 }
 
 /**
- * Renders high-impact executive summary KPI cards side-by-side
+ * Renders high-impact executive summary KPI cards with strict boundary clipping
+ * so text can never overflow or overlap with adjacent cards.
  */
 export function addKpiCards(doc: jsPDF, startY: number, cards: KpiCard[]): number {
   const pageWidth = doc.internal.pageSize.getWidth();
   const leftMargin = 14;
   const rightMargin = 14;
   const totalWidth = pageWidth - leftMargin - rightMargin; // 182mm
-  const gap = 3.5;
+  const gap = 3;
   const cardCount = Math.min(cards.length, 4);
   const cardWidth = (totalWidth - gap * (cardCount - 1)) / cardCount;
   const cardHeight = 18;
+  const maxTextWidth = cardWidth - 8; // Leave 4mm on left, 4mm on right
 
   cards.slice(0, 4).forEach((card, index) => {
     const x = leftMargin + index * (cardWidth + gap);
@@ -179,54 +170,56 @@ export function addKpiCards(doc: jsPDF, startY: number, cards: KpiCard[]): numbe
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
-    doc.roundedRect(x, startY, cardWidth, cardHeight, 2, 2, "FD");
+    doc.roundedRect(x, startY, cardWidth, cardHeight, 1.5, 1.5, "FD");
 
     // Left accent pill
-    let pillColor = [148, 163, 184]; // default slate
+    let pillColor = [148, 163, 184];
     if (card.variant === "success") pillColor = [16, 185, 129];
     else if (card.variant === "warning") pillColor = [245, 158, 11];
     else if (card.variant === "danger") pillColor = [239, 68, 68];
 
     doc.setFillColor(pillColor[0], pillColor[1], pillColor[2]);
-    doc.rect(x, startY + 2.5, 1.8, cardHeight - 5, "F");
+    doc.rect(x, startY + 2.5, 1.5, cardHeight - 5, "F");
 
-    // Label
+    // Label with strict maxWidth
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6.5);
     doc.setTextColor(100, 116, 139);
-    doc.text(card.label.toUpperCase(), x + 4.5, startY + 5.5);
+    doc.text(card.label.toUpperCase(), x + 4, startY + 5.5, { maxWidth: maxTextWidth });
 
-    // Value
+    // Value with strict maxWidth
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     if (card.variant === "success") {
       doc.setTextColor(15, 118, 110);
     } else {
       doc.setTextColor(15, 23, 42);
     }
-    doc.text(card.value, x + 4.5, startY + 11.5);
+    doc.text(card.value, x + 4, startY + 11.2, { maxWidth: maxTextWidth });
 
-    // Subtext
+    // Subtext with strict maxWidth
     if (card.subtext) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(6.5);
       doc.setTextColor(148, 163, 184);
-      doc.text(card.subtext, x + 4.5, startY + 15.5);
+      doc.text(card.subtext, x + 4, startY + 15.2, { maxWidth: maxTextWidth });
     }
   });
 
-  return startY + cardHeight + 6;
+  return startY + cardHeight + 7;
 }
 
 /**
- * Draws a clean section heading with an accent indicator before a table
+ * Draws a clean section heading with an accent indicator before a table.
+ * If subtitle is provided, it is rendered on its own line beneath the title
+ * to completely eliminate horizontal text collisions.
  */
 export function addSectionHeading(doc: jsPDF, y: number, title: string, subtitle?: string): number {
   doc.setFillColor(24, 24, 27);
   doc.rect(14, y, 2.5, 5, "F");
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(24, 24, 27);
   doc.text(title.toUpperCase(), 18.5, y + 4);
 
@@ -234,19 +227,16 @@ export function addSectionHeading(doc: jsPDF, y: number, title: string, subtitle
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(113, 113, 122);
-    const titleWidth = doc.getTextWidth(title.toUpperCase());
-    doc.text(`—  ${subtitle}`, 21 + titleWidth, y + 4);
+    doc.text(subtitle, 18.5, y + 8.5);
+    return y + 11;
   }
 
   return y + 7;
 }
 
 /**
- * Adds an enterprise-formatted table to the PDF document with:
- * - Dark charcoal high-contrast header styling
- * - Auto column alignments (numbers right-aligned, text left-aligned)
- * - Subtle alternating zebra striping
- * - Highlighted total row if specified or detected
+ * Adds an enterprise-formatted table to the PDF document.
+ * Automatically guards against orphan headings and footer collisions.
  */
 export function addReportTable(
   doc: jsPDF,
@@ -255,9 +245,18 @@ export function addReportTable(
   body: (string | number)[][],
   options?: AddTableOptions
 ): number {
+  const pageHeight = doc.internal.pageSize.getHeight();
   let tableStartY = startY;
+
+  // If remaining space on the current page is insufficient for a heading + 2 rows,
+  // push to a clean new page before drawing the section heading.
+  if (tableStartY + 35 > pageHeight - 20) {
+    doc.addPage();
+    tableStartY = 16;
+  }
+
   if (options?.sectionTitle) {
-    tableStartY = addSectionHeading(doc, startY, options.sectionTitle, options.sectionSubtitle);
+    tableStartY = addSectionHeading(doc, tableStartY, options.sectionTitle, options.sectionSubtitle);
   }
 
   // Construct columnStyles based on alignments
@@ -276,7 +275,6 @@ export function addReportTable(
         lower.includes("planned") ||
         lower.includes("actual") ||
         lower.includes("variance") ||
-        lower.includes("price") ||
         lower.includes("total")
       ) {
         columnStyles[colIdx] = { halign: "right" };
@@ -299,20 +297,20 @@ export function addReportTable(
     head: [head],
     body,
     theme: "plain",
-    margin: { left: 14, right: 14 },
+    margin: { left: 14, right: 14, bottom: 18, top: 16 },
     headStyles: {
       fillColor: [24, 24, 27], // Dark slate
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 8.5,
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      fontSize: 8,
+      cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 },
     },
     bodyStyles: {
       textColor: [39, 39, 42],
-      fontSize: 8,
-      cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 },
+      fontSize: 7.8,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
       lineColor: [228, 228, 231],
-      lineWidth: 0.2,
+      lineWidth: 0.15,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
@@ -323,7 +321,7 @@ export function addReportTable(
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fillColor = [241, 245, 249];
         data.cell.styles.textColor = [15, 23, 42];
-        data.cell.styles.fontSize = 8.5;
+        data.cell.styles.fontSize = 8;
       }
     },
   };
@@ -339,57 +337,57 @@ export function addCertificationBlock(doc: jsPDF, startY: number): number {
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // If not enough space on current page, create new page
   let y = startY + 8;
-  if (y + 32 > pageHeight - 20) {
+  // If not enough space for certification paragraph and signature lines, create new page
+  if (y + 36 > pageHeight - 20) {
     doc.addPage();
-    y = 20;
+    y = 18;
   }
 
-  // Certification note
+  // Certification note with controlled wrapping
   doc.setFont("helvetica", "italic");
   doc.setFontSize(7);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    "CERTIFICATION: This official statement has been prepared from the Urban Furniture General Ledger in compliance with standard double-entry accounting principles and reflects all verified journal postings as of the reporting date.",
+    "CERTIFICATION: This statement has been generated from the Urban Furniture General Ledger in accordance with standard double-entry accounting principles and accurately represents verified ledger transactions as of the reporting date.",
     14,
     y,
     { maxWidth: pageWidth - 28 }
   );
 
-  y += 14;
+  y += 10;
 
   // Sign-off columns
   // Left: Controller / Accounting
   doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.4);
-  doc.line(14, y + 8, 85, y + 8);
+  doc.setLineWidth(0.35);
+  doc.line(14, y + 6, 85, y + 6);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text("PREPARED BY: Senior Accountant / Controller", 14, y + 12);
+  doc.text("PREPARED BY: Senior Accountant / Controller", 14, y + 10);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
-  doc.text("Signature & Date Verified", 14, y + 15.5);
+  doc.text("Verified from Ledger Records", 14, y + 13.5);
 
   // Right: Management / Executive
   const rightColX = 125;
-  doc.line(rightColX, y + 8, pageWidth - 14, y + 8);
+  doc.line(rightColX, y + 6, pageWidth - 14, y + 6);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text("APPROVED BY: Chief Financial Officer / Auditor", rightColX, y + 12);
+  doc.text("APPROVED BY: Chief Financial Officer / Auditor", rightColX, y + 10);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
-  doc.text("Signature & Date Certified", rightColX, y + 15.5);
+  doc.text("Official Financial Endorsement", rightColX, y + 13.5);
 
-  return y + 18;
+  return y + 16;
 }
 
 /**
@@ -406,8 +404,8 @@ export function finalizeReportDoc(doc: jsPDF, filename: string): void {
 
     // Footer divider line
     doc.setDrawColor(228, 228, 231);
-    doc.setLineWidth(0.35);
-    doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+    doc.setLineWidth(0.3);
+    doc.line(14, pageHeight - 13, pageWidth - 14, pageHeight - 13);
 
     // Left security notice
     doc.setFont("helvetica", "normal");
@@ -416,14 +414,14 @@ export function finalizeReportDoc(doc: jsPDF, filename: string): void {
     doc.text(
       "Urban Furniture Inc. • Confidential Financial Report • Official General Ledger Record",
       14,
-      pageHeight - 9
+      pageHeight - 8.5
     );
 
     // Center timestamp
     doc.text(
       `Printed: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`,
       pageWidth / 2,
-      pageHeight - 9,
+      pageHeight - 8.5,
       { align: "center" }
     );
 
@@ -431,7 +429,7 @@ export function finalizeReportDoc(doc: jsPDF, filename: string): void {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 9, { align: "right" });
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 8.5, { align: "right" });
   }
 
   doc.save(filename);

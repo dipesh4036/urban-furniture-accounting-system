@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  confirmSalesOrderController,
   createSalesOrderController,
   generateInvoiceFromSalesOrderController,
   getSalesOrderByIdController,
@@ -19,9 +20,11 @@ salesOrdersRouter.use(authenticate, authorize("ADMIN", "ACCOUNTANT"));
 
 salesOrdersRouter.post("/", validate(createSalesOrderSchema), createSalesOrderController);
 salesOrdersRouter.get("/", validate(listSalesOrdersQuerySchema, "query"), listSalesOrdersController);
+salesOrdersRouter.post("/:id/confirm", confirmSalesOrderController);
 salesOrdersRouter.post(
   "/:id/generate-invoice",
   validate(generateInvoiceFromSalesOrderSchema),
   generateInvoiceFromSalesOrderController
 );
 salesOrdersRouter.get("/:id", getSalesOrderByIdController);
+
