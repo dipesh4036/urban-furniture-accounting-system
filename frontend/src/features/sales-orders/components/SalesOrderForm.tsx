@@ -30,7 +30,7 @@ interface SalesOrderFormProps {
   inDialog?: boolean;
 }
 
-export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesOrderFormProps = {}{ onSuccess }: { onSuccess?: () => void } = {}) {
+export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesOrderFormProps = {}) {
   const createSalesOrder = useCreateSalesOrder();
 
   const {

@@ -770,6 +770,8 @@ export default function DashboardPage() {
           </DialogHeader>
           <div className="py-2">
             <SalesOrderForm
+              inDialog={true}
+              onCancel={() => setIsSalesDialogOpen(false)}
               onSuccess={() => {
                 setIsSalesDialogOpen(false);
                 refetchSales();
@@ -790,6 +792,8 @@ export default function DashboardPage() {
           </DialogHeader>
           <div className="py-2">
             <PurchaseOrderForm
+              inDialog={true}
+              onCancel={() => setIsPurchaseDialogOpen(false)}
               onSuccess={() => {
                 setIsPurchaseDialogOpen(false);
                 refetchPurchase();
