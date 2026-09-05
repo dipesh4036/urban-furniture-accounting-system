@@ -1,4 +1,4 @@
-import { Armchair, Lamp, Sofa } from "lucide-react";
+import Image from "next/image";
 
 // Shared shell for every auth page: /login, /forgot-password,
 // /reset-password, /activate-account. Split into a branding panel on
@@ -7,30 +7,32 @@ import { Armchair, Lamp, Sofa } from "lucide-react";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
-      <div className="hidden flex-1 flex-col justify-between bg-muted p-12 lg:flex">
-        <div>
-          <h1 className="text-2xl font-bold">Urban Furniture</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Accounting System</p>
+      <div className="relative hidden flex-1 flex-col justify-between p-12 lg:flex">
+        {/* The photo fills the whole panel as a background - everything
+            else in this panel sits on top of it. */}
+        <Image
+          src="/furniture-banner.jpg"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          className="object-cover"
+        />
+
+        {/* A dark gradient over the photo so the white text stays
+            readable no matter which part of the photo is behind it. */}
+        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-black/50" />
+
+        <div className="relative z-10">
+          <h1 className="text-2xl font-bold text-white">Urban Furniture</h1>
+          <p className="mt-1 text-sm text-white/80">Accounting System</p>
         </div>
 
-        {/*
-          A simple furniture-themed illustration built from icons instead
-          of an image file - stays crisp at any size and follows the
-          theme's colors automatically in light/dark mode.
-        */}
-        <div className="flex flex-1 items-center justify-center">
-          <div className="relative flex size-64 items-center justify-center rounded-full bg-primary/10">
-            <Sofa className="size-28 text-primary" strokeWidth={1.25} />
-            <Armchair className="absolute -bottom-2 -left-6 size-16 text-primary/70" strokeWidth={1.25} />
-            <Lamp className="absolute -top-2 -right-4 size-16 text-primary/70" strokeWidth={1.25} />
-          </div>
-        </div>
-
-        <div>
-          <p className="max-w-sm text-sm text-muted-foreground">
+        <div className="relative z-10">
+          <p className="max-w-sm text-sm text-white/80">
             Manage contacts, sales, purchases and reports in one place.
           </p>
-          <p className="mt-4 text-xs text-muted-foreground">Roles supported: Admin, Invoicing User, Contact</p>
+          <p className="mt-4 text-xs text-white/60">Roles supported: Admin, Invoicing User, Contact</p>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { resetPassword } from "@/features/auth/services/auth.service";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "@/features/auth/validators/auth.validator";
 
@@ -83,6 +84,7 @@ export function ResetPasswordForm() {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="h-10 mt-2">
+          {isSubmitting && <Spinner />}
           {isSubmitting ? "Resetting..." : "Reset password"}
         </Button>
       </form>

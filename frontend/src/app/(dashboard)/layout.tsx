@@ -14,6 +14,12 @@ const navItems = [
   { label: "Sales", href: "/sales-orders" },
   { label: "Purchase", href: "/purchase-orders" },
   { label: "Accounting", href: "/contacts" },
+  // Temporary direct links so these pages are reachable while they're
+  // being built - remove once they're folded into the "Accounting"
+  // category link above, or given their own real place in the nav.
+  { label: "Chart of Accounts", href: "/accounts" },
+  { label: "Products", href: "/products" },
+  { label: "Journals", href: "/journals" },
   { label: "Reports", href: "/reports" },
   { label: "Users", href: "/users" },
 ];
