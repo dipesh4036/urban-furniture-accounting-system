@@ -22,7 +22,7 @@ function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function PurchaseOrderForm() {
+export function PurchaseOrderForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const createPurchaseOrder = useCreatePurchaseOrder();
 
   const {
@@ -54,6 +54,7 @@ export function PurchaseOrderForm() {
       await createPurchaseOrder.mutateAsync(values);
       toast.success("Purchase order created");
       reset({ vendorId: "", date: "", items: [{ ...emptyPurchaseOrderItem }] });
+      onSuccess?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
