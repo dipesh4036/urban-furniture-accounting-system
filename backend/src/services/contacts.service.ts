@@ -36,6 +36,14 @@ const safeContactSelect = {
 // created either way. An Admin can always resend/regenerate the link
 // later if needed.
 export async function createContact(input: CreateContactInput) {
+  const existingEmail = await prisma.contact.findUnique({
+    where: { email: input.email },
+    select: { id: true },
+  });
+  if (existingEmail) {
+    throw new AppError(409, "This email is already registered", "EMAIL_TAKEN");
+  }
+
   const activationToken = crypto.randomBytes(32).toString("hex");
   const activationTokenExpiresAt = new Date(Date.now() + ACTIVATION_TOKEN_EXPIRY_MS);
 
@@ -104,6 +112,16 @@ export async function updateContact(id: string, input: UpdateContactInput) {
   const exists = await prisma.contact.findUnique({ where: { id }, select: { id: true } });
   if (!exists) {
     throw new AppError(404, "Contact not found", "CONTACT_NOT_FOUND");
+  }
+
+  if (input.email) {
+    const existingEmail = await prisma.contact.findFirst({
+      where: { email: input.email, id: { not: id } },
+      select: { id: true },
+    });
+    if (existingEmail) {
+      throw new AppError(409, "This email is already registered", "EMAIL_TAKEN");
+    }
   }
 
   return prisma.contact.update({ where: { id }, data: input, select: safeContactSelect });

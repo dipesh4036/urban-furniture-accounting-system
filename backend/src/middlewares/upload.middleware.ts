@@ -1,8 +1,15 @@
 import crypto from "crypto";
+import fs from "fs";
 import path from "path";
 import multer from "multer";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+
+// Ensure uploads directory exists on disk so multer diskStorage never throws ENOENT
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5mb
 
 const storage = multer.diskStorage({

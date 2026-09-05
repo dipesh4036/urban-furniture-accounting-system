@@ -66,6 +66,7 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
     handleSubmit,
     reset,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -115,7 +116,14 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
       }
       setOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+      const code = error instanceof Error ? (error as Error & { code?: string }).code : undefined;
+      const message = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+
+      if (code === "EMAIL_TAKEN") {
+        setError("email", { message });
+      } else {
+        toast.error(message);
+      }
     }
   }
 
