@@ -1,11 +1,12 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ConvertToBillDialog } from "@/features/purchase-orders/components/ConvertToBillDialog";
-import { PurchaseOrderForm } from "@/features/purchase-orders/components/PurchaseOrderForm";
+import { PurchaseOrderFormDialog } from "@/features/purchase-orders/components/PurchaseOrderFormDialog";
 import { usePurchaseOrders } from "@/features/purchase-orders/hooks/usePurchaseOrders";
 import type { PurchaseOrder } from "@/features/purchase-orders/services/purchase-orders.service";
 
@@ -24,9 +25,19 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Purchase Orders</h1>
-        <p className="text-sm text-muted-foreground">Orders placed with vendors.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Purchase Orders</h1>
+          <p className="text-sm text-muted-foreground">Orders placed with vendors.</p>
+        </div>
+        <PurchaseOrderFormDialog
+          trigger={
+            <Button size="sm">
+              <Plus className="mr-2 size-4" />
+              New Purchase Order
+            </Button>
+          }
+        />
       </div>
 
       {isLoading && (
@@ -45,9 +56,17 @@ export default function PurchaseOrdersPage() {
       )}
 
       {!isLoading && !isError && data && data.purchaseOrders.length === 0 && (
-        <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-          No purchase orders yet. Create the first one below.
-        </p>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-12 text-center">
+          <p className="text-sm text-muted-foreground">No purchase orders yet.</p>
+          <PurchaseOrderFormDialog
+            trigger={
+              <Button size="sm" variant="outline">
+                <Plus className="mr-2 size-4" />
+                Create Purchase Order
+              </Button>
+            }
+          />
+        </div>
       )}
 
       {!isLoading && !isError && data && data.purchaseOrders.length > 0 && (
@@ -97,8 +116,6 @@ export default function PurchaseOrdersPage() {
           </TableBody>
         </Table>
       )}
-
-      <PurchaseOrderForm />
     </div>
   );
 }

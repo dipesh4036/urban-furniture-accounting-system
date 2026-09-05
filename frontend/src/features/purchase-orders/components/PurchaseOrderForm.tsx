@@ -18,11 +18,18 @@ import {
   type PurchaseOrderFormValues,
 } from "../validators/purchase-orders.validator";
 
+import { cn } from "@/lib/utils";
+
 function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function PurchaseOrderForm() {
+interface PurchaseOrderFormProps {
+  onSuccess?: () => void;
+  inDialog?: boolean;
+}
+
+export function PurchaseOrderForm({ onSuccess, inDialog = false }: PurchaseOrderFormProps = {}) {
   const createPurchaseOrder = useCreatePurchaseOrder();
 
   const {
@@ -54,14 +61,15 @@ export function PurchaseOrderForm() {
       await createPurchaseOrder.mutateAsync(values);
       toast.success("Purchase order created");
       reset({ vendorId: "", date: "", items: [{ ...emptyPurchaseOrderItem }] });
+      onSuccess?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="text-sm font-semibold">New Purchase Order</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-sm font-semibold">New Purchase Order</h2>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">

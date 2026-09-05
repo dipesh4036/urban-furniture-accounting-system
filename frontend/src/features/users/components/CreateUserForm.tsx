@@ -11,12 +11,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCreateUser } from "../hooks/useUsers";
 import { createUserFormSchema, staffRoles, type CreateUserFormValues } from "../validators/users.validator";
 
+import { cn } from "@/lib/utils";
+
 const roleLabels: Record<CreateUserFormValues["role"], string> = {
   ADMIN: "Admin",
   ACCOUNTANT: "Accountant",
 };
 
-export function CreateUserForm() {
+interface CreateUserFormProps {
+  onSuccess?: () => void;
+  inDialog?: boolean;
+}
+
+export function CreateUserForm({ onSuccess, inDialog = false }: CreateUserFormProps = {}) {
   const createUser = useCreateUser();
 
   const {
@@ -48,6 +55,7 @@ export function CreateUserForm() {
       await createUser.mutateAsync(values);
       toast.success("User created");
       reset();
+      onSuccess?.();
     } catch (error) {
       // The backend tells us exactly which field collided via `code` -
       // LOGIN_ID_TAKEN or EMAIL_TAKEN - so we can show it right under
@@ -66,8 +74,9 @@ export function CreateUserForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="text-sm font-semibold">Create User</h2>
+    <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-sm font-semibold">Create User</h2>}
+
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">

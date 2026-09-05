@@ -18,11 +18,18 @@ import {
   type SalesOrderFormValues,
 } from "../validators/sales-orders.validator";
 
+import { cn } from "@/lib/utils";
+
 function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function SalesOrderForm() {
+interface SalesOrderFormProps {
+  onSuccess?: () => void;
+  inDialog?: boolean;
+}
+
+export function SalesOrderForm({ onSuccess, inDialog = false }: SalesOrderFormProps = {}) {
   const createSalesOrder = useCreateSalesOrder();
 
   const {
@@ -57,14 +64,15 @@ export function SalesOrderForm() {
       await createSalesOrder.mutateAsync(values);
       toast.success("Sales order created");
       reset({ customerId: "", date: "", items: [{ ...emptySalesOrderItem }] });
+      onSuccess?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="text-sm font-semibold">New Sales Order</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-sm font-semibold">New Sales Order</h2>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">

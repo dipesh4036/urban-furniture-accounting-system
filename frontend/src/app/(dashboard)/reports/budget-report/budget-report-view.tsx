@@ -39,34 +39,34 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
     {
       kpiCards: [
         {
-          label: "Total Budget Planned",
+          label: "Total Planned",
           value: `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          subtext: `${data.budgets.length} Budget Targets`,
+          subtext: `${data.budgets.length} Targets`,
           variant: "default",
         },
         {
           label: "Expense Budgets",
           value: `${expenseBudgets.length} Centers`,
-          subtext: `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} Allocated`,
+          subtext: `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
           variant: "warning",
         },
         {
-          label: "Revenue Targets",
+          label: "Revenue Goals",
           value: `${incomeBudgets.length} Targets`,
-          subtext: `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} Goal`,
+          subtext: `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
           variant: "success",
         },
         {
-          label: "Reporting Period",
+          label: "Fiscal Scope",
           value: period,
-          subtext: "Quarterly Fiscal Scope",
+          subtext: "Quarterly Target",
           variant: "default",
         },
       ],
     }
   );
 
-  let y = 74;
+  let y = (doc as any).contentStartY || 72;
 
   // 1. Detailed Departmental Budget Table
   y = addReportTable(

@@ -19,6 +19,8 @@ import {
   type JournalEntryFormValues,
 } from "../validators/journal-entries.validator";
 
+import { cn } from "@/lib/utils";
+
 // Rounds to the nearest cent before comparing debit/credit totals, so a
 // floating point rounding error (e.g. 0.1 + 0.2 = 0.30000000000000004)
 // never blocks a genuinely balanced entry from being submitted.
@@ -26,7 +28,12 @@ function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function JournalEntryForm() {
+interface JournalEntryFormProps {
+  onSuccess?: () => void;
+  inDialog?: boolean;
+}
+
+export function JournalEntryForm({ onSuccess, inDialog = false }: JournalEntryFormProps = {}) {
   const { data: journalsData, isLoading: isLoadingJournals } = useJournals({ limit: 100 });
   const createJournalEntry = useCreateJournalEntry();
 
@@ -65,14 +72,15 @@ export function JournalEntryForm() {
       await createJournalEntry.mutateAsync(values);
       toast.success("Journal entry created");
       reset({ journalId: "", date: "", reference: "", items: [{ ...emptyJournalItem }, { ...emptyJournalItem }] });
+      onSuccess?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="text-sm font-semibold">New Journal Entry</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-sm font-semibold">New Journal Entry</h2>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-2">

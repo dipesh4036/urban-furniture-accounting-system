@@ -40,32 +40,32 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
         {
           label: "Total Assets",
           value: `$${formatAmount(data.totalAssets)}`,
-          subtext: `${data.assets.length} Active Accounts`,
+          subtext: `${data.assets.length} Accounts`,
           variant: "default",
         },
         {
-          label: "Total Liabilities",
+          label: "Liabilities",
           value: `$${formatAmount(totalLiabilities)}`,
-          subtext: `${data.liabilities.length} Accounts Payable / Debt`,
+          subtext: `${data.liabilities.length} Accounts`,
           variant: "warning",
         },
         {
-          label: "Total Capital",
+          label: "Capital & Equity",
           value: `$${formatAmount(totalCapital)}`,
-          subtext: `${data.capital.length} Equity Accounts`,
+          subtext: `${data.capital.length} Accounts`,
           variant: "default",
         },
         {
-          label: "Position Status",
+          label: "Balance Status",
           value: isBalanced ? "Balanced" : "Active Ledger",
-          subtext: isBalanced ? "A = L + E Verified" : `Diff: $${Math.abs(Number(data.totalAssets) - totalLiabilitiesAndEquity).toFixed(2)}`,
+          subtext: isBalanced ? "Assets = Liab + Eq" : "Under Review",
           variant: isBalanced ? "success" : "default",
         },
       ],
     }
   );
 
-  let y = 74;
+  let y = (doc as any).contentStartY || 72;
 
   // 1. Assets Table
   y = addReportTable(

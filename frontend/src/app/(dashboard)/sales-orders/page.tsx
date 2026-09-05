@@ -1,11 +1,12 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GenerateInvoiceDialog } from "@/features/sales-orders/components/GenerateInvoiceDialog";
-import { SalesOrderForm } from "@/features/sales-orders/components/SalesOrderForm";
+import { SalesOrderFormDialog } from "@/features/sales-orders/components/SalesOrderFormDialog";
 import { useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
 import type { SalesOrder } from "@/features/sales-orders/services/sales-orders.service";
 
@@ -23,10 +24,21 @@ export default function SalesOrdersPage() {
   const { data, isLoading, isError, refetch } = useSalesOrders();
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Sales Orders</h1>
-        <p className="text-sm text-muted-foreground">Orders from customers.</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sales Orders</h1>
+          <p className="text-sm text-muted-foreground">Orders from customers.</p>
+        </div>
+
+        <SalesOrderFormDialog
+          trigger={
+            <Button>
+              <Plus className="size-4" />
+              New Sales Order
+            </Button>
+          }
+        />
       </div>
 
       {isLoading && (
@@ -45,9 +57,10 @@ export default function SalesOrdersPage() {
       )}
 
       {!isLoading && !isError && data && data.salesOrders.length === 0 && (
-        <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-          No sales orders yet. Create the first one below.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center">
+          <p className="text-sm text-muted-foreground">No sales orders yet.</p>
+          <SalesOrderFormDialog trigger={<Button>Create your first sales order</Button>} />
+        </div>
       )}
 
       {!isLoading && !isError && data && data.salesOrders.length > 0 && (
@@ -97,8 +110,6 @@ export default function SalesOrdersPage() {
           </TableBody>
         </Table>
       )}
-
-      <SalesOrderForm />
     </div>
   );
 }

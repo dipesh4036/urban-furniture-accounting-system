@@ -40,34 +40,34 @@ async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossR
     {
       kpiCards: [
         {
-          label: "Total Operating Revenue",
+          label: "Total Revenue",
           value: `$${formatAmount(data.totalIncome)}`,
           subtext: `${data.income.length} Income Streams`,
           variant: "default",
         },
         {
-          label: "Total Operating Expenses",
+          label: "Total Expenses",
           value: `$${formatAmount(data.totalExpenses)}`,
           subtext: `${expenseRatio}% Expense Ratio`,
           variant: "warning",
         },
         {
-          label: "Net Operating Profit",
+          label: "Net Profit",
           value: `${isProfitable ? "+" : ""}$${formatAmount(data.netProfit)}`,
-          subtext: `${marginPercent}% Net Profit Margin`,
+          subtext: `${marginPercent}% Margin`,
           variant: isProfitable ? "success" : "danger",
         },
         {
-          label: "Operating Performance",
-          value: isProfitable ? "Profitable" : "Operating Loss",
-          subtext: isProfitable ? "Net Positive Return" : "Expenditures Exceed Income",
+          label: "Status",
+          value: isProfitable ? "Profitable" : "Net Loss",
+          subtext: isProfitable ? "Positive Return" : "Deficit",
           variant: isProfitable ? "success" : "danger",
         },
       ],
     }
   );
 
-  let y = 74;
+  let y = (doc as any).contentStartY || 72;
 
   // 1. Operating Revenue Table
   y = addReportTable(
