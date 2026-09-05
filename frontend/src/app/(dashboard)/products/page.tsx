@@ -1,23 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Package, Plus } from "lucide-react";
+import { Eye, MoreVertical, Package, Pencil, Plus, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ProductFormDialog } from "@/features/products/components/ProductFormDialog";
-import { useArchiveProduct, useProducts } from "@/features/products/hooks/useProducts";
+import { ProductDetailsDialog } from "@/features/products/components/ProductDetailsDialog";
+import { useActivateProduct, useDeactivateProduct, useProducts } from "@/features/products/hooks/useProducts";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
-import type { ProductType } from "@/features/products/services/products.service";
+import type { Product, ProductType } from "@/features/products/services/products.service";
 
 function formatPrice(value: string): string {
   return Number(value).toLocaleString("en-IN", {
@@ -28,6 +35,8 @@ function formatPrice(value: string): string {
 
 export default function ProductsPage() {
   const [view, setView] = useState<ViewMode>("list");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
 
   const {
     searchInput,
@@ -51,11 +60,12 @@ export default function ProductsPage() {
   const { data, isLoading, isError, refetch } = useProducts({
     search: search || undefined,
     type: filters.type === "ALL" ? undefined : (filters.type as ProductType),
-    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "ARCHIVED"),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "INACTIVE"),
     page: currentPage,
     limit: pageSize,
   });
-  const archiveProduct = useArchiveProduct();
+  const deactivateProduct = useDeactivateProduct();
+  const activateProduct = useActivateProduct();
 
   const totalItems = data?.meta.total || 0;
   const totalPages = data?.meta.totalPages || 0;
@@ -63,17 +73,27 @@ export default function ProductsPage() {
   const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, totalItems);
 
-  const handleArchive = async (id: string) => {
+  const handleDeactivate = async (id: string) => {
     try {
-      await archiveProduct.mutateAsync(id);
-      toast.success("Product archived");
+      await deactivateProduct.mutateAsync(id);
+      toast.success("Product set to inactive");
     } catch {
-      toast.error("Failed to archive product");
+      toast.error("Failed to deactivate product");
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    try {
+      await activateProduct.mutateAsync(id);
+      toast.success("Product set to active");
+    } catch {
+      toast.error("Failed to activate product");
     }
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
@@ -92,6 +112,25 @@ export default function ProductsPage() {
           />
         </div>
       </div>
+
+      {/* Controlled View Product Details Modal */}
+      <ProductDetailsDialog
+        product={viewingProduct}
+        open={!!viewingProduct}
+        onOpenChange={(open) => {
+          if (!open) setViewingProduct(null);
+        }}
+        onEdit={(product) => setEditingProduct(product)}
+      />
+
+      {/* Controlled Edit Product Modal */}
+      <ProductFormDialog
+        product={editingProduct ?? undefined}
+        open={!!editingProduct}
+        onOpenChange={(open) => {
+          if (!open) setEditingProduct(null);
+        }}
+      />
 
       {isLoading && (
         <div className="flex flex-col gap-2">
@@ -123,7 +162,7 @@ export default function ProductsPage() {
             searchQuery={searchInput}
             onSearchChange={setSearchQuery}
             searchPlaceholder="Search products by name, category, or type..."
-            filterOptions={[
+            filters={[
               {
                 key: "type",
                 label: "All Types",
@@ -139,11 +178,11 @@ export default function ProductsPage() {
                 options: [
                   { label: "All Statuses", value: "ALL" },
                   { label: "Active", value: "ACTIVE" },
-                  { label: "Archived", value: "ARCHIVED" },
+                  { label: "Inactive", value: "INACTIVE" },
                 ],
               },
             ]}
-            selectedFilters={filters}
+            activeFilters={filters}
             onFilterChange={setFilter}
             isFiltered={isFiltered}
             onResetFilters={resetFilters}
@@ -156,24 +195,24 @@ export default function ProductsPage() {
           ) : (
             <>
               {view === "list" ? (
-                <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
+                <div className="w-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Sales Price (₹)</TableHead>
-                        <TableHead className="text-right">Cost (₹)</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="min-w-[180px]">Product Name</TableHead>
+                        <TableHead className="w-[110px]">Type</TableHead>
+                        <TableHead className="w-[130px] text-right">Sales Price (₹)</TableHead>
+                        <TableHead className="w-[140px] text-right pr-6">Cost (₹)</TableHead>
+                        <TableHead className="min-w-[140px] pl-6">Category</TableHead>
+                        <TableHead className="w-[110px]">Status</TableHead>
+                        <TableHead className="w-[90px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedData.map((product) => (
                         <TableRow key={product.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
+                          <TableCell className="max-w-[220px]">
+                            <div className="flex items-center gap-3 min-w-0">
                               {product.image ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -186,7 +225,9 @@ export default function ProductsPage() {
                                   <Package className="size-4.5 text-primary/70" />
                                 </div>
                               )}
-                              <span className="font-semibold text-foreground">{product.name}</span>
+                              <span className="font-semibold text-foreground truncate" title={product.name}>
+                                {product.name}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -195,26 +236,74 @@ export default function ProductsPage() {
                           <TableCell className="text-right font-medium text-foreground tabular-nums">
                             ₹{formatPrice(product.salesPrice)}
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground tabular-nums">
+                          <TableCell className="text-right text-muted-foreground tabular-nums pr-6">
                             ₹{formatPrice(product.costPrice)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{product.category}</TableCell>
+                          <TableCell className="text-muted-foreground pl-6">
+                            <span className="truncate block max-w-[150px]" title={product.category}>
+                              {product.category}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <StatusBadge status={product.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <ProductFormDialog product={product} trigger={<Button variant="outline" size="sm">Edit</Button>} />
-                              {product.isActive && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleArchive(product.id)}
-                                  disabled={archiveProduct.isPending}
-                                >
-                                  Archive
-                                </Button>
-                              )}
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                onClick={() => setViewingProduct(product)}
+                                title="View Details"
+                              >
+                                <Eye className="size-4" />
+                                <span className="sr-only">View Details</span>
+                              </Button>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    >
+                                      <MoreVertical className="size-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  }
+                                />
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem onClick={() => setViewingProduct(product)}>
+                                    <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>View Details</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setEditingProduct(product)}>
+                                    <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {product.isActive ? (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeactivate(product.id)}
+                                      disabled={deactivateProduct.isPending}
+                                      className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                    >
+                                      <UserX className="size-3.5 mr-2" />
+                                      <span>Deactivate</span>
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => handleActivate(product.id)}
+                                      disabled={activateProduct.isPending}
+                                      className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                    >
+                                      <UserCheck className="size-3.5 mr-2" />
+                                      <span>Activate</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -239,7 +328,7 @@ export default function ProductsPage() {
                     {paginatedData.map((product) => (
                       <Card key={product.id} className="flex flex-col justify-between transition-all hover:shadow-md">
                         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
                             {product.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -252,18 +341,78 @@ export default function ProductsPage() {
                                 <Package className="size-5" />
                               </div>
                             )}
-                            <div>
-                              <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-foreground truncate" title={product.name}>
+                                {product.name}
+                              </h3>
                               <div className="mt-1 flex flex-wrap gap-1.5">
                                 <StatusBadge status={product.type} showDot={false} size="sm" />
-                                <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">
+                                <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 truncate max-w-[120px]">
                                   {product.category}
                                 </span>
                               </div>
                             </div>
                           </div>
+
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                              onClick={() => setViewingProduct(product)}
+                              title="View Details"
+                            >
+                              <Eye className="size-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <MoreVertical className="size-4" />
+                                    <span className="sr-only">Actions</span>
+                                  </Button>
+                                }
+                              />
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem onClick={() => setViewingProduct(product)}>
+                                  <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>View Details</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEditingProduct(product)}>
+                                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>Edit</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {product.isActive ? (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeactivate(product.id)}
+                                    disabled={deactivateProduct.isPending}
+                                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                  >
+                                    <UserX className="size-3.5 mr-2" />
+                                    <span>Deactivate</span>
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => handleActivate(product.id)}
+                                    disabled={activateProduct.isPending}
+                                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                  >
+                                    <UserCheck className="size-3.5 mr-2" />
+                                    <span>Activate</span>
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </CardHeader>
-                        <CardContent className="space-y-2 pb-3 text-sm">
+                        <CardContent className="space-y-2 pb-4 text-sm">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-muted-foreground">Sales Price:</span>
                             <span className="font-semibold text-foreground tabular-nums">₹{formatPrice(product.salesPrice)}</span>
@@ -276,27 +425,6 @@ export default function ProductsPage() {
                             <StatusBadge status={product.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                           </div>
                         </CardContent>
-                        <CardFooter className="flex justify-end gap-2 border-t pt-3">
-                          <ProductFormDialog
-                            product={product}
-                            trigger={
-                              <Button variant="outline" size="sm" className="h-8 text-xs">
-                                Edit
-                              </Button>
-                            }
-                          />
-                          {product.isActive && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs"
-                              onClick={() => handleArchive(product.id)}
-                              disabled={archiveProduct.isPending}
-                            >
-                              Archive
-                            </Button>
-                          )}
-                        </CardFooter>
                       </Card>
                     ))}
                   </div>

@@ -32,7 +32,7 @@ export interface ProductListResult {
 export interface ListProductsParams {
   search?: string;
   type?: ProductType;
-  status?: "ACTIVE" | "ARCHIVED";
+  status?: "ACTIVE" | "ARCHIVED" | "INACTIVE";
   page?: number;
   limit?: number;
 }

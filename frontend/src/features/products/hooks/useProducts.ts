@@ -55,8 +55,8 @@ export function useUpdateProduct() {
 }
 
 // A thin wrapper over update so the UI doesn't have to build the
-// { isActive: false } payload itself every time it archives a product.
-export function useArchiveProduct() {
+// { isActive: false } payload itself every time it deactivates a product.
+export function useDeactivateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -67,3 +67,18 @@ export function useArchiveProduct() {
     },
   });
 }
+
+// Reactivate an inactive product
+export function useActivateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => updateProduct(id, { isActive: true }),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["products", "list"] });
+      queryClient.invalidateQueries({ queryKey: productsDetailKey(id) });
+    },
+  });
+}
+
+export const useArchiveProduct = useDeactivateProduct;
