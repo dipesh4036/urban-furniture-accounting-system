@@ -71,9 +71,38 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
       });
       return;
     }
+
+    // P2000 = a value was too long for its column (e.g. a schema/column
+    // size mismatch we didn't catch in Zod validation).
+    if (err.code === "P2000") {
+      const columnName = (err.meta?.column_name as string | undefined) ?? "field";
+      res.status(422).json({
+        success: false,
+        message: `The value provided for ${columnName} is too long`,
+        code: "VALUE_TOO_LONG",
+        errors: {},
+        timestamp,
+      });
+      return;
+    }
   }
 
-  // 4) Anything else is unexpected - log the full error for us to debug,
+  // 4) The request body was bigger than express.json()'s limit (e.g. a
+  // large profile image). body-parser throws a plain error object with
+  // type "entity.too.large" for this - not a class we can use
+  // `instanceof` on, so it's checked by that field instead.
+  if (typeof err === "object" && err !== null && "type" in err && err.type === "entity.too.large") {
+    res.status(413).json({
+      success: false,
+      message: "That request is too large. Please use a smaller file.",
+      code: "PAYLOAD_TOO_LARGE",
+      errors: {},
+      timestamp,
+    });
+    return;
+  }
+
+  // 5) Anything else is unexpected - log the full error for us to debug,
   // but never send the stack trace or internal details to the client.
   console.error(err);
   res.status(500).json({

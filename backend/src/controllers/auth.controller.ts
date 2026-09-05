@@ -53,13 +53,13 @@ export const meController = asyncHandler(async (req: Request, res: Response) => 
 
 export const forgotPasswordController = asyncHandler(async (req: Request, res: Response) => {
   const { email } = req.body;
+  // Throws a 404 with a clear message if the email has no account - see
+  // authService.forgotPassword for the tradeoff this makes.
   await authService.forgotPassword(email);
 
-  // Same response whether or not the email exists - see the comment in
-  // authService.forgotPassword for why.
   res.status(200).json({
     success: true,
-    message: "If that email has an account, a reset link has been sent",
+    message: "A password reset link has been sent to your email",
     data: {},
     timestamp: new Date().toISOString(),
   });
@@ -85,6 +85,21 @@ export const activateAccountController = asyncHandler(async (req: Request, res: 
     success: true,
     message: "Account activated successfully",
     data: {},
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export const contactLoginController = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  const result = await authService.contactLogin(email, password);
+
+  res.cookie("accessToken", result.accessToken, cookieOptions);
+  res.cookie("refreshToken", result.refreshToken, cookieOptions);
+
+  res.status(200).json({
+    success: true,
+    message: "Logged in successfully",
+    data: { contact: result.contact },
     timestamp: new Date().toISOString(),
   });
 });

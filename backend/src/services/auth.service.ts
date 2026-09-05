@@ -26,6 +26,7 @@ export async function comparePassword(plainPassword: string, passwordHash: strin
 // Contact Master feature is built.
 export interface TokenPayload {
   sub: string; // the user's or contact's id
+  id?: string;
   role: string; // "ADMIN" | "ACCOUNTANT" | "CONTACT"
 }
 
@@ -90,30 +91,46 @@ export async function login(loginId: string, password: string): Promise<LoginRes
 // Used by GET /auth/me - looks up the full profile for whoever the
 // access token belongs to, so the frontend gets real user data back
 // instead of just the raw {sub, role} JWT payload.
-export async function getCurrentUser(userId: string): Promise<SafeUser> {
+export async function getCurrentUser(userId: string): Promise<SafeUser | SafeContact> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  if (!user || !user.isActive) {
-    throw new AppError(401, "Session is no longer valid", "NOT_AUTHENTICATED");
+  if (user && user.isActive) {
+    return {
+      id: user.id,
+      name: user.name,
+      loginId: user.loginId,
+      email: user.email,
+      role: user.role,
+    };
   }
 
-  return {
-    id: user.id,
-    name: user.name,
-    loginId: user.loginId,
-    email: user.email,
-    role: user.role,
-  };
+  const contact = await prisma.contact.findUnique({ where: { id: userId } });
+  if (contact && contact.isActive) {
+    return {
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      type: contact.type,
+      role: "CONTACT",
+    };
+  }
+
+  throw new AppError(401, "Session is no longer valid", "NOT_AUTHENTICATED");
 }
 
 // If a User exists with this email, generate a reset token and email
-// it to them. If no User exists with this email, do nothing - but
-// don't tell the caller that. Otherwise an attacker could use this
-// endpoint to check which emails have accounts.
+// it to them. If no User exists with this email, throw a clear error so
+// the person knows to try a different email instead of waiting on an
+// email that will never arrive.
+//
+// NOTE: this intentionally reveals whether an email has an account,
+// which is normally an anti-pattern (it lets someone probe which emails
+// are registered) - this was a deliberate product decision to prioritize
+// clear UX for staff over that protection.
 export async function forgotPassword(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.isActive) {
-    return;
+    throw new AppError(404, "No account found with this email address", "EMAIL_NOT_FOUND");
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");
@@ -144,8 +161,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   });
 }
 
-// Which kind of account a token belongs to. Right now only "USER" is
-// ever actually returned - see the TODO in activateAccount below.
+// Which kind of account a token belongs to.
 type TokenAudience = "USER" | "CONTACT";
 
 // One shared "set your password from a token" endpoint, meant to serve
@@ -154,8 +170,7 @@ type TokenAudience = "USER" | "CONTACT";
 //   the password directly on Create User - but built out here anyway so
 //   the shared token flow has a working reference implementation.
 // - CONTACT: a Contact activates their account this way after an
-//   Admin/Accountant creates them in Contact Master. NOT WIRED UP YET -
-//   the Contact model doesn't exist until the feat/contact-master branch.
+//   Admin/Accountant creates them in Contact Master (feat/contact-master).
 export async function activateAccount(token: string, newPassword: string): Promise<void> {
   const audience = await resolveTokenAudience(token);
 
@@ -176,12 +191,24 @@ export async function activateAccount(token: string, newPassword: string): Promi
     return;
   }
 
-  // TODO(feat/contact-master): this branch is currently unreachable -
-  // resolveTokenAudience() has no way to return "CONTACT" yet. Once the
-  // Contact model exists, look up the Contact by activationToken here,
-  // check activationTokenExpiresAt, then set Contact.passwordHash,
-  // isActivated = true, and clear activationToken/activationTokenExpiresAt.
-  throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+  const contact = await prisma.contact.findFirst({
+    where: { activationToken: token, activationTokenExpiresAt: { gt: new Date() } },
+  });
+
+  if (!contact) {
+    throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.contact.update({
+    where: { id: contact.id },
+    data: {
+      passwordHash,
+      isActivated: true,
+      activationToken: null,
+      activationTokenExpiresAt: null,
+    },
+  });
 }
 
 async function resolveTokenAudience(token: string): Promise<TokenAudience> {
@@ -190,7 +217,62 @@ async function resolveTokenAudience(token: string): Promise<TokenAudience> {
     return "USER";
   }
 
-  // TODO(feat/contact-master): once Contact exists, check
-  // Contact.activationToken here and return "CONTACT" if it matches.
-  return "USER";
+  // Fall through to CONTACT - activateAccount() itself re-checks the
+  // token (and its expiry) against the Contact table and throws a clean
+  // 400 if nothing matches there either, so returning "CONTACT" here
+  // even when no Contact has this token is safe.
+  return "CONTACT";
+}
+
+interface SafeContact {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  role: "CONTACT";
+}
+
+interface ContactLoginResult {
+  accessToken: string;
+  refreshToken: string;
+  contact: SafeContact;
+}
+
+// Same shape as login() above, but against the Contact table instead of
+// User, and only lets an activated Contact in (isActivated implies
+// passwordHash is set - the two are always changed together in
+// activateAccount()).
+export async function contactLogin(email: string, password: string): Promise<ContactLoginResult> {
+  const contact = await prisma.contact.findUnique({ where: { email } });
+
+  if (!contact || !contact.isActive) {
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+  }
+
+  if (!contact.isActivated || !contact.passwordHash) {
+    throw new AppError(
+      403,
+      "This account hasn't been activated yet. Check your email for the activation link",
+      "ACCOUNT_NOT_ACTIVATED"
+    );
+  }
+
+  const passwordMatches = await comparePassword(password, contact.passwordHash);
+  if (!passwordMatches) {
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+  }
+
+  const tokenPayload: TokenPayload = { sub: contact.id, role: "CONTACT" };
+
+  return {
+    accessToken: issueAccessToken(tokenPayload),
+    refreshToken: issueRefreshToken(tokenPayload),
+    contact: {
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      type: contact.type,
+      role: "CONTACT",
+    },
+  };
 }
