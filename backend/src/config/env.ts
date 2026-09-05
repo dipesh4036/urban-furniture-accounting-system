@@ -1,3 +1,7 @@
+// Loads the .env file into process.env before we read anything from it.
+// Without this, process.env would be empty when running the app directly
+// (only the Prisma CLI loads .env on its own, via prisma.config.ts).
+import "dotenv/config";
 import { z } from "zod";
 
 const envSchema = z.object({
