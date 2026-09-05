@@ -17,7 +17,7 @@ export function requireOwnContactRecord(
   fieldName: "vendorId" | "customerId",
   model: "vendor-bills" | "customer-invoices"
 ) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     const user = (req as any).user;
 
     // Only enforce ownership for Contacts; Admins/Accountants pass through
