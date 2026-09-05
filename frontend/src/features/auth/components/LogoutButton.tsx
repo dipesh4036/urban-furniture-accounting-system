@@ -7,10 +7,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/services/auth.service";
 
+import { LogOut } from "lucide-react";
+
+interface LogoutButtonProps {
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
+}
+
 // Small client-leaf component so the rest of the dashboard layout can stay
 // a server component (frontend-nextjs SKILL.md: push "use client" to the
 // leaf, not the whole layout).
-export function LogoutButton() {
+export function LogoutButton({ variant = "outline", size = "sm", className }: LogoutButtonProps = {}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -30,8 +38,16 @@ export function LogoutButton() {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut}>
-      {isLoggingOut ? "Signing out..." : "Sign out"}
+    <Button
+      variant={variant}
+      size={size}
+      onClick={handleLogout}
+      disabled={isLoggingOut}
+      className={className}
+      title="Sign out"
+    >
+      <LogOut className="size-4" />
+      {size !== "icon" && <span className="ml-1.5">{isLoggingOut ? "Signing out..." : "Sign out"}</span>}
     </Button>
   );
 }

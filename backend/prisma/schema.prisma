@@ -160,15 +160,16 @@ enum DocStatus {
 enum PaymentType {
   RECEIPT
   PAYMENT
-  REFUND
 }
 
 enum PaymentMethod {
-  BANK_TRANSFER
-  CHEQUE
   CASH
-  CARD
-  ONLINE
+  BANK
+}
+
+enum AnalyticType {
+  INCOME
+  EXPENSE
 }
 
 enum ContactType {
@@ -182,10 +183,10 @@ enum ContactType {
 // which triggers an activation email so the Contact can set their own
 // password and log in to the portal. See plan.md Module 6.
 model Contact {
-  id                       String          @id @default(cuid())
+  id                       String            @id @default(cuid())
   name                     String
   type                     ContactType
-  email                    String          @unique
+  email                    String            @unique
   mobile                   String
   city                     String
   state                    String
@@ -194,14 +195,14 @@ model Contact {
   // the image itself - see POST /uploads and profileImageSchema.
   profileImage             String?
   passwordHash             String? // null until the Contact activates their account
-  isActivated              Boolean         @default(false)
+  isActivated              Boolean           @default(false)
   activationToken          String?
   activationTokenExpiresAt DateTime?
   resetToken               String?
   resetTokenExpiresAt      DateTime?
-  isActive                 Boolean         @default(true)
-  createdAt                DateTime        @default(now())
-  updatedAt                DateTime        @updatedAt
+  isActive                 Boolean           @default(true)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
   purchaseOrders           PurchaseOrder[]
   vendorBills              VendorBill[]
   salesOrders              SalesOrder[]
@@ -209,11 +210,6 @@ model Contact {
 
   @@index([type])
   @@map("contacts")
-}
-
-enum AnalyticType {
-  INCOME
-  EXPENSE
 }
 
 // A cost/revenue center (e.g. "Marketing", "Warehouse Ops") that Budgets
@@ -281,26 +277,6 @@ model PurchaseOrderItem {
   @@map("purchase_order_items")
 }
 
-model VendorBill {
-  id              String        @id @default(cuid())
-  billNumber      String        @unique
-  purchaseOrderId String        @unique
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
-  vendorId        String
-  vendor          Contact       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
-  invoiceDate     DateTime
-  dueDate         DateTime
-  totalAmount     Decimal       @db.Decimal(10, 2)
-  status          DocStatus     @default(UNPAID)
-  payments        Payment[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@index([vendorId])
-  @@index([status])
-  @@map("vendor_bills")
-}
-
 model SalesOrder {
   id        String           @id @default(cuid())
   soNumber  String           @unique
@@ -330,6 +306,26 @@ model SalesOrderItem {
   @@index([salesOrderId])
   @@index([productId])
   @@map("sales_order_items")
+}
+
+model VendorBill {
+  id              String        @id @default(cuid())
+  billNumber      String        @unique
+  purchaseOrderId String        @unique
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  vendorId        String
+  vendor          Contact       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  invoiceDate     DateTime
+  dueDate         DateTime
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  status          DocStatus     @default(UNPAID)
+  payments        Payment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+  @@map("vendor_bills")
 }
 
 model CustomerInvoice {
@@ -370,4 +366,3 @@ model Payment {
   @@index([customerInvoiceId])
   @@map("payments")
 }
-

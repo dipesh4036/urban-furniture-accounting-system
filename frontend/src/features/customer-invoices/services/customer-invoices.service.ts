@@ -25,6 +25,17 @@ export interface CustomerInvoice {
   status: DocStatus;
   emailSentAt: string | null;
   payments: Payment[];
+  salesOrder?: {
+    id: string;
+    soNumber: string;
+    items?: Array<{
+      id: string;
+      productId: string;
+      quantity: number;
+      unitPrice: string | number;
+      tax: string | number;
+    }>;
+  };
 }
 
 export interface CustomerInvoiceListResult {

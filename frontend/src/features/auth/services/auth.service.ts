@@ -31,7 +31,7 @@ export function login(values: LoginFormValues) {
 
 // Calls GET /auth/me to read the current session. Used by useAuth() to
 // know who's logged in (and whether anyone is logged in at all).
-export function me(): Promise<{ user: AuthUser }> {
+export function me(): Promise<{ user: AuthUser | AuthContact }> {
   return api.get("/auth/me");
 }
 

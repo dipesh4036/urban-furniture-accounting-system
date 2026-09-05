@@ -75,7 +75,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  req.user = payload;
+  req.user = { ...payload, id: payload.sub };
   next();
 }
 
