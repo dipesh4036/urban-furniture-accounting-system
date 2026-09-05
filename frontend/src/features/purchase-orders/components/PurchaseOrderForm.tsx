@@ -106,8 +106,8 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
           </span>
         </div>
 
-        <div className="overflow-x-auto pb-1">
-          <div className="min-w-[520px] flex flex-col gap-2">
+          <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-[540px] flex-col gap-2">
             <div className="grid grid-cols-[1fr_90px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
               <span>
                 Product
