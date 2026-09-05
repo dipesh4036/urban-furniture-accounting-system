@@ -20,6 +20,7 @@ const navItems = [
   { label: "Chart of Accounts", href: "/accounts" },
   { label: "Products", href: "/products" },
   { label: "Journals", href: "/journals" },
+  { label: "Journal Entries", href: "/journal-entries" },
   { label: "Reports", href: "/reports" },
   { label: "Users", href: "/users" },
 ];
