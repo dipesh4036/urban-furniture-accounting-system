@@ -52,7 +52,8 @@ model Account {
   isActive  Boolean     @default(true)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-  journals  Journal[]
+  journals     Journal[]
+  journalItems JournalItem[]
 
   @@index([type])
   @@map("accounts")
@@ -70,16 +71,52 @@ enum JournalType {
 // to. See plan.md Module 7. onDelete: Restrict on defaultAccountId means
 // an Account can't be deleted while a Journal still points at it.
 model Journal {
-  id               String      @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String
   type             JournalType
   defaultAccountId String
-  defaultAccount   Account     @relation(fields: [defaultAccountId], references: [id], onDelete: Restrict)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  defaultAccount   Account        @relation(fields: [defaultAccountId], references: [id], onDelete: Restrict)
+  entries          JournalEntry[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([defaultAccountId])
   @@map("journals")
+}
+
+// The actual accounting record for one transaction - which Journal it
+// belongs to, when, and a reference. The debit/credit lines themselves
+// live on JournalItem below. See plan.md Module 8.
+model JournalEntry {
+  id        String        @id @default(cuid())
+  journalId String
+  journal   Journal       @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  date      DateTime
+  reference String
+  items     JournalItem[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([journalId])
+  @@map("journal_entries")
+}
+
+// One debit or credit line within a JournalEntry. onDelete: Cascade on
+// journalEntryId means deleting an entry deletes its lines too; onDelete:
+// Restrict on accountId means an Account can't be deleted while any
+// JournalItem still references it (same reasoning as Journal.defaultAccountId).
+model JournalItem {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  debit          Decimal      @default(0) @db.Decimal(10, 2)
+  credit         Decimal      @default(0) @db.Decimal(10, 2)
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_items")
 }
 
 enum ProductType {
