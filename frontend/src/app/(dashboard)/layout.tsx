@@ -25,10 +25,22 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles?: ("ADMIN" | "ACCOUNTANT")[];
+}
+
+interface NavGroup {
+  title: string;
+  roles?: ("ADMIN" | "ACCOUNTANT")[];
+  items: NavItem[];
+}
+
 // Top-level nav categories for the staff dashboard, grouped to match
-// plan.md's modules. Each links to the first page in that category - the
-// individual pages inside each category get built out in later branches.
-const navGroups = [
+// plan.md's modules. Settings / Users is strictly restricted to ADMIN.
+const navGroups: NavGroup[] = [
   {
     title: "Overview",
     items: [
@@ -66,8 +78,9 @@ const navGroups = [
   },
   {
     title: "Settings",
+    roles: ["ADMIN"],
     items: [
-      { label: "Users", href: "/users", icon: Settings },
+      { label: "Create User", href: "/users", icon: Settings, roles: ["ADMIN"] },
     ]
   }
 ];
@@ -83,6 +96,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, isLoading } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Filter navigation items by the logged-in user's role. Non-admins (Accountants)
+  // never see the Settings / Users tab.
+  const userRole = user?.role;
+  const filteredNavGroups = navGroups
+    .filter((group) => !group.roles || (userRole && group.roles.includes(userRole as any)))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || (userRole && item.roles.includes(userRole as any))),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const SidebarContent = () => (
     <>
@@ -105,7 +129,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-thumb-muted">
         <nav className="flex flex-col gap-6">
-          {navGroups.map((group) => (
+          {filteredNavGroups.map((group) => (
             <div key={group.title} className="flex flex-col gap-2">
               <h3 className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {group.title}
@@ -146,8 +170,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="truncate text-sm font-medium text-foreground">
               {isLoading ? "Loading..." : (user?.name ?? "")}
             </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {user?.role ?? ""}
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              {user?.role === "ADMIN" ? "Administrator" : user?.role === "ACCOUNTANT" ? "Accountant" : (user?.role ?? "")}
             </span>
           </div>
           <div className="shrink-0">

@@ -91,3 +91,9 @@ export function createPurchaseOrder(input: CreatePurchaseOrderInput): Promise<{ 
 export function convertToBill(id: string, input: ConvertToBillInput): Promise<{ vendorBill: VendorBill }> {
   return api.post(`/purchase-orders/${id}/convert-to-bill`, input);
 }
+
+// Calls POST /purchase-orders/:id/confirm. Moves status from DRAFT to CONFIRMED.
+export function confirmPurchaseOrder(id: string): Promise<{ purchaseOrder: PurchaseOrder }> {
+  return api.post(`/purchase-orders/${id}/confirm`);
+}
+

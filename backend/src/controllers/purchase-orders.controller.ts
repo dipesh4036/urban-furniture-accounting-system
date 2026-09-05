@@ -45,3 +45,15 @@ export const convertPurchaseOrderToBillController = asyncHandler(async (req: Req
     timestamp: new Date().toISOString(),
   });
 });
+
+export const confirmPurchaseOrderController = asyncHandler(async (req: Request, res: Response) => {
+  const po = await purchaseOrdersService.confirmPurchaseOrder(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: "Purchase order confirmed successfully",
+    data: { purchaseOrder: po },
+    timestamp: new Date().toISOString(),
+  });
+});
+

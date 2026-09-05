@@ -97,3 +97,9 @@ export function generateInvoice(
 ): Promise<{ customerInvoice: CustomerInvoice }> {
   return api.post(`/sales-orders/${id}/generate-invoice`, input);
 }
+
+// Calls POST /sales-orders/:id/confirm. Moves status from DRAFT to CONFIRMED.
+export function confirmSalesOrder(id: string): Promise<{ salesOrder: SalesOrder }> {
+  return api.post(`/sales-orders/${id}/confirm`);
+}
+

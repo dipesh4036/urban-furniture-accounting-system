@@ -1,13 +1,14 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GenerateInvoiceDialog } from "@/features/sales-orders/components/GenerateInvoiceDialog";
 import { SalesOrderFormDialog } from "@/features/sales-orders/components/SalesOrderFormDialog";
-import { useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
+import { useConfirmSalesOrder, useSalesOrders } from "@/features/sales-orders/hooks/useSalesOrders";
 import type { SalesOrder } from "@/features/sales-orders/services/sales-orders.service";
 
 function soTotal(so: SalesOrder): number {
@@ -22,6 +23,16 @@ function statusVariant(status: SalesOrder["status"]): "default" | "secondary" | 
 
 export default function SalesOrdersPage() {
   const { data, isLoading, isError, refetch } = useSalesOrders();
+  const confirmMutation = useConfirmSalesOrder();
+
+  const handleConfirm = async (id: string, soNumber: string) => {
+    try {
+      await confirmMutation.mutateAsync(id);
+      toast.success(`Sales Order ${soNumber} confirmed successfully`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to confirm sales order");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,8 +87,9 @@ export default function SalesOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.salesOrders.map((so) => (
+            {data.salesOrders.map((so: SalesOrder) => (
               <TableRow key={so.id}>
+
                 <TableCell className="font-medium">{so.soNumber}</TableCell>
                 <TableCell>{so.customer.name}</TableCell>
                 <TableCell>{new Date(so.date).toLocaleDateString()}</TableCell>
@@ -86,24 +98,29 @@ export default function SalesOrdersPage() {
                 </TableCell>
                 <TableCell className="text-right">{soTotal(so).toFixed(2)}</TableCell>
                 <TableCell className="text-right">
-                  {/*
-                    The backend only accepts generate-invoice while status
-                    is CONFIRMED (422 otherwise) - so the action stays
-                    hidden for any other status instead of letting it
-                    fail. Note: nothing in the current API moves a Sales
-                    Order from DRAFT to CONFIRMED yet, so this action has
-                    no way to become available until that endpoint exists.
-                  */}
-                  {so.status === "CONFIRMED" && (
-                    <GenerateInvoiceDialog
-                      salesOrderId={so.id}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Generate Invoice
-                        </Button>
-                      }
-                    />
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {so.status === "DRAFT" && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        disabled={confirmMutation.isPending}
+                        onClick={() => handleConfirm(so.id, so.soNumber)}
+                      >
+                        <CheckCircle2 className="size-3.5 mr-1" />
+                        Confirm Order
+                      </Button>
+                    )}
+                    {so.status === "CONFIRMED" && (
+                      <GenerateInvoiceDialog
+                        salesOrderId={so.id}
+                        trigger={
+                          <Button variant="outline" size="sm">
+                            Generate Invoice
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -113,3 +130,4 @@ export default function SalesOrdersPage() {
     </div>
   );
 }
+
