@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBudgetReport } from "@/features/reports/hooks/useReports";
 import type { BudgetReportResult } from "@/features/reports/services/reports.service";
-import { addReportTable, createReportDoc } from "@/features/reports/utils/reportPdf";
+import { addCertificationBlock, addReportTable, createReportDoc, finalizeReportDoc } from "@/features/reports/utils/reportPdf";
 
 // "-" for null, not "0.00" - a null actual/variance means it genuinely
 // hasn't been computed yet (no analytic linkage on JournalItem), which
@@ -25,24 +25,124 @@ function defaultPeriod(): string {
   return `${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}`;
 }
 
-function downloadBudgetReportPdf(period: string, data: BudgetReportResult) {
-  const doc = createReportDoc("Budget Report", `Period: ${period}`);
+async function downloadBudgetReportPdf(period: string, data: BudgetReportResult) {
+  const totalPlanned = data.budgets.reduce(
+    (sum, b) => sum + Number(b.plannedAmount),
+    0
+  );
+  const expenseBudgets = data.budgets.filter((b) => b.analyticAccountType === "EXPENSE");
+  const incomeBudgets = data.budgets.filter((b) => b.analyticAccountType === "INCOME");
 
-  addReportTable(
-    doc,
-    32,
-    ["Budget", "Analytic Account", "Responsible Person", "Planned", "Actual", "Variance"],
-    data.budgets.map((budget) => [
-      budget.budgetName,
-      `${budget.analyticAccountName} (${budget.analyticAccountType})`,
-      budget.responsiblePerson.name,
-      formatAmount(budget.plannedAmount),
-      formatAmount(budget.actualAmount),
-      formatAmount(budget.variance),
-    ])
+  const doc = await createReportDoc(
+    "Budget Performance Report",
+    `Fiscal Period: ${period} • Departmental & Analytic Cost Center Allocations`,
+    {
+      kpiCards: [
+        {
+          label: "Total Budget Planned",
+          value: `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          subtext: `${data.budgets.length} Budget Targets`,
+          variant: "default",
+        },
+        {
+          label: "Expense Budgets",
+          value: `${expenseBudgets.length} Centers`,
+          subtext: `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} Allocated`,
+          variant: "warning",
+        },
+        {
+          label: "Revenue Targets",
+          value: `${incomeBudgets.length} Targets`,
+          subtext: `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} Goal`,
+          variant: "success",
+        },
+        {
+          label: "Reporting Period",
+          value: period,
+          subtext: "Quarterly Fiscal Scope",
+          variant: "default",
+        },
+      ],
+    }
   );
 
-  doc.save(`budget-report-${period}.pdf`);
+  let y = 74;
+
+  // 1. Detailed Departmental Budget Table
+  y = addReportTable(
+    doc,
+    y,
+    ["Budget Line", "Analytic Cost Center", "Category", "Responsible Manager", "Planned (USD)", "Actual (USD)", "Variance (USD)"],
+    [
+      ...data.budgets.map((b) => [
+        b.budgetName,
+        b.analyticAccountName,
+        b.analyticAccountType,
+        b.responsiblePerson.name,
+        `$${formatAmount(b.plannedAmount)}`,
+        b.actualAmount === null ? "-" : `$${formatAmount(b.actualAmount)}`,
+        b.variance === null ? "-" : `$${formatAmount(b.variance)}`,
+      ]),
+      [
+        "TOTAL PLANNED BUDGET",
+        "",
+        "",
+        "",
+        `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        "-",
+        "-",
+      ],
+    ],
+    {
+      sectionTitle: "Departmental Budget Allocations",
+      sectionSubtitle: `Operational, Marketing, and Sales Financial Targets for ${period}`,
+      highlightTotalRow: true,
+      columnAlignments: ["left", "left", "center", "left", "right", "right", "right"],
+    }
+  );
+
+  // 2. Departmental Distribution Summary Table
+  y = addReportTable(
+    doc,
+    y + 6,
+    ["Department Classification", "Allocated Centers", "Total Planned Allocation (USD)", "Budget Share"],
+    [
+      [
+        "Operational & Expense Departments",
+        `${expenseBudgets.length} Accounts`,
+        `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        totalPlanned > 0
+          ? `${((expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) / totalPlanned) * 100).toFixed(1)}%`
+          : "0.0%",
+      ],
+      [
+        "Revenue & Commercial Targets",
+        `${incomeBudgets.length} Accounts`,
+        `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        totalPlanned > 0
+          ? `${((incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) / totalPlanned) * 100).toFixed(1)}%`
+          : "0.0%",
+      ],
+      [
+        "TOTAL CONSOLIDATED ALLOCATION",
+        `${data.budgets.length} Cost Centers`,
+        `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        "100.0%",
+      ],
+    ],
+    {
+      sectionTitle: "Budget Allocation by Department Class",
+      sectionSubtitle: "Consolidated Expense vs. Revenue Distribution",
+      highlightTotalRow: true,
+      columnAlignments: ["left", "center", "right", "right"],
+    }
+  );
+
+  // Certification & Sign-off Block
+  addCertificationBlock(doc, y);
+
+  // Stamp running footers & save
+  finalizeReportDoc(doc, `budget-report-${period}.pdf`);
 }
 
 export function BudgetReportView() {

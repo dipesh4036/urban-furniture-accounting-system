@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProfitLoss } from "@/features/reports/hooks/useReports";
 import type { ProfitLossAccount, ProfitLossReport } from "@/features/reports/services/reports.service";
-import { addReportTable, createReportDoc, getFinalY } from "@/features/reports/utils/reportPdf";
+import { addCertificationBlock, addReportTable, createReportDoc, finalizeReportDoc } from "@/features/reports/utils/reportPdf";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -25,30 +25,107 @@ function formatAmount(value: string): string {
   return Number(value).toFixed(2);
 }
 
-function downloadProfitLossPdf(from: string, to: string, data: ProfitLossReport) {
-  const doc = createReportDoc("Profit & Loss", `${from} to ${to}`);
-  let y = 32;
+async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossReport) {
+  const isProfitable = Number(data.netProfit) >= 0;
+  const marginPercent = Number(data.totalIncome) > 0
+    ? ((Number(data.netProfit) / Number(data.totalIncome)) * 100).toFixed(1)
+    : "0.0";
+  const expenseRatio = Number(data.totalIncome) > 0
+    ? ((Number(data.totalExpenses) / Number(data.totalIncome)) * 100).toFixed(1)
+    : "0.0";
 
+  const doc = await createReportDoc(
+    "Profit & Loss Statement",
+    `Reporting Period: ${from} to ${to} • Accrual Accounting Basis • General Ledger Verified`,
+    {
+      kpiCards: [
+        {
+          label: "Total Operating Revenue",
+          value: `$${formatAmount(data.totalIncome)}`,
+          subtext: `${data.income.length} Income Streams`,
+          variant: "default",
+        },
+        {
+          label: "Total Operating Expenses",
+          value: `$${formatAmount(data.totalExpenses)}`,
+          subtext: `${expenseRatio}% Expense Ratio`,
+          variant: "warning",
+        },
+        {
+          label: "Net Operating Profit",
+          value: `${isProfitable ? "+" : ""}$${formatAmount(data.netProfit)}`,
+          subtext: `${marginPercent}% Net Profit Margin`,
+          variant: isProfitable ? "success" : "danger",
+        },
+        {
+          label: "Operating Performance",
+          value: isProfitable ? "Profitable" : "Operating Loss",
+          subtext: isProfitable ? "Net Positive Return" : "Expenditures Exceed Income",
+          variant: isProfitable ? "success" : "danger",
+        },
+      ],
+    }
+  );
+
+  let y = 74;
+
+  // 1. Operating Revenue Table
   y = addReportTable(
     doc,
     y,
-    ["Income", "Amount"],
-    [...data.income.map((a) => [a.accountName, formatAmount(a.amount)]), ["Total Income", formatAmount(data.totalIncome)]]
-  );
-
-  addReportTable(
-    doc,
-    y + 8,
-    ["Expenses", "Amount"],
+    ["Revenue Stream / Account", "Category", "Account ID", "Amount (USD)"],
     [
-      ...data.expenses.map((a) => [a.accountName, formatAmount(a.amount)]),
-      ["Total Expenses", formatAmount(data.totalExpenses)],
-    ]
+      ...data.income.map((a) => [a.accountName, "Operating Revenue", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.amount)}`]),
+      ["TOTAL OPERATING REVENUE", "", "", `$${formatAmount(data.totalIncome)}`],
+    ],
+    {
+      sectionTitle: "Revenue & Operating Income",
+      sectionSubtitle: "Sales Invoices, Client Consulting & Assembly Receipts",
+      highlightTotalRow: true,
+      columnAlignments: ["left", "left", "center", "right"],
+    }
   );
 
-  doc.text(`Net Profit: ${formatAmount(data.netProfit)}`, 14, getFinalY(doc) + 12);
+  // 2. Operating Expenses Table
+  y = addReportTable(
+    doc,
+    y + 6,
+    ["Expense Account", "Classification", "Account ID", "Amount (USD)"],
+    [
+      ...data.expenses.map((a) => [a.accountName, "Operations & Overhead", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.amount)}`]),
+      ["TOTAL OPERATING EXPENSES", "", "", `$${formatAmount(data.totalExpenses)}`],
+    ],
+    {
+      sectionTitle: "Operating & Overhead Expenses",
+      sectionSubtitle: "COGS, Facility Rent, Payroll & Utility Disbursals",
+      highlightTotalRow: true,
+      columnAlignments: ["left", "left", "center", "right"],
+    }
+  );
 
-  doc.save(`profit-loss-${from}-to-${to}.pdf`);
+  // 3. Financial Performance Summary Table
+  y = addReportTable(
+    doc,
+    y + 6,
+    ["Performance Breakdown", "Financial Calculation", "Total (USD)"],
+    [
+      ["Gross Operating Income", "Total Earned Revenue", `$${formatAmount(data.totalIncome)}`],
+      ["Less: Direct & Operating Expenses", "Cost of Sales, Salaries & Facilities", `($${formatAmount(data.totalExpenses)})`],
+      ["NET OPERATING PROFIT / (LOSS)", "Income minus Operating Expenses", `$${formatAmount(data.netProfit)}`],
+    ],
+    {
+      sectionTitle: "Net Earnings Summary",
+      sectionSubtitle: "Bottom-Line Operating Performance",
+      highlightTotalRow: true,
+      columnAlignments: ["left", "left", "right"],
+    }
+  );
+
+  // Certification & Sign-off Block
+  addCertificationBlock(doc, y);
+
+  // Stamp running footers & save
+  finalizeReportDoc(doc, `profit-loss-${from}-to-${to}.pdf`);
 }
 
 function Section({ title, accounts, total }: { title: string; accounts: ProfitLossAccount[]; total: string }) {
