@@ -41,7 +41,9 @@ interface ContactFormDialogProps {
   // Pass a contact to edit it. Leave it out to create a new one.
   contact?: Contact;
   // The element that opens the dialog when clicked (e.g. a <Button>).
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function emptyValues(contact?: Contact): ContactFormValues {
@@ -57,8 +59,19 @@ function emptyValues(contact?: Contact): ContactFormValues {
   };
 }
 
-export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ContactFormDialog({
+  contact,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: ContactFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (val: boolean) => {
+    if (controlledOnOpenChange) controlledOnOpenChange(val);
+    if (!isControlled) setInternalOpen(val);
+  };
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!contact;
@@ -135,7 +148,7 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold tracking-tight">

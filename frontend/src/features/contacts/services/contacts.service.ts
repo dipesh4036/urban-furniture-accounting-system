@@ -39,7 +39,7 @@ export interface ListContactsParams {
   page?: number;
   limit?: number;
   search?: string;
-  status?: "ACTIVE" | "ARCHIVED" | "PENDING_ACTIVATION";
+  status?: "ACTIVE" | "ARCHIVED" | "INACTIVE" | "PENDING_ACTIVATION";
 }
 
 export interface CreateContactInput {

@@ -67,7 +67,7 @@ export async function createContact(input: CreateContactInput) {
 interface ListContactsOptions {
   type?: ContactType;
   search?: string;
-  status?: "ACTIVE" | "ARCHIVED" | "PENDING_ACTIVATION";
+  status?: "ACTIVE" | "ARCHIVED" | "INACTIVE" | "PENDING_ACTIVATION";
   page?: number;
   limit?: number;
 }
@@ -81,7 +81,7 @@ export async function listContacts(options: ListContactsOptions) {
   const statusFilter =
     options.status === "ACTIVE"
       ? { isActive: true }
-      : options.status === "ARCHIVED"
+      : options.status === "ARCHIVED" || options.status === "INACTIVE"
         ? { isActive: false }
         : options.status === "PENDING_ACTIVATION"
           ? { isActivated: false }
