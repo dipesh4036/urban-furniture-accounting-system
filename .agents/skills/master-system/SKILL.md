@@ -188,6 +188,20 @@ Someone opening the project for the first time should understand it quickly.
 Use meaningful names.
 Avoid abbreviations.
 
+Write code simple enough that a junior developer could read it and follow what's
+happening line by line, not just a senior engineer. This means:
+- Prefer plain, explicit code (if/else, named variables, small helper functions)
+  over clever one-liners, deep generics, or advanced language tricks, even if
+  the clever version is a few lines shorter.
+- Add short plain-language comments explaining the "why" for anything non-obvious
+  (e.g. "P2002 = unique constraint failed", "Express only treats this as an error
+  handler if it has exactly 4 params").
+- Don't reach for an abstraction (interfaces, factories, generics) until there's
+  a real, current reason for it. A straightforward function beats a "smart" one.
+"Production-ready" and "simple to read" are not in tension — the best production
+code is the code a new teammate can understand without asking someone else to
+explain it.
+
 ---
 
 # FILE ORGANIZATION

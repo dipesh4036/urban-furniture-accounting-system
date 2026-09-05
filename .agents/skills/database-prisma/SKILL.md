@@ -14,6 +14,25 @@ Design the schema before writing a single endpoint.
 
 ---
 
+# LOCAL CONNECTION (MAMP)
+Local development connects to MySQL through **MAMP**, not a standalone MySQL install or
+Docker container. Start MAMP's servers before running any Prisma command (`migrate dev`,
+`db seed`, `studio`) — Prisma cannot reach the database otherwise.
+
+- MAMP's default MySQL port is `8889` (not MySQL's standard `3306`) — confirm the actual
+  port in MAMP's preferences, since it varies per machine setup.
+- `DATABASE_URL` in `backend/.env` follows:
+  `mysql://<user>:<password>@127.0.0.1:8889/<database_name>`
+  MAMP's default credentials are typically `root` / `root` unless changed.
+- Use `127.0.0.1`, not `localhost` — `localhost` can resolve to a socket path Prisma
+  doesn't expect on some MAMP setups, causing spurious connection errors.
+- Create the target database via MAMP's phpMyAdmin (or `mysql -h 127.0.0.1 -P 8889 -u root -p`)
+  before the first `prisma migrate dev` — Prisma does not create the database itself for MySQL.
+- `.env.example` (committed) documents this shape with placeholder values; the real
+  `.env` (gitignored) holds the actual local MAMP port/credentials for each developer's machine.
+
+---
+
 # NAMING
 - Model: `PascalCase`, singular → `User`, `OrderItem`
 - Field: `camelCase` → `createdAt`, `isActive`
