@@ -24,6 +24,16 @@ export interface VendorBill {
   totalAmount: string;
   status: DocStatus;
   payments: Payment[];
+  purchaseOrder?: {
+    id: string;
+    poNumber: string;
+    items?: Array<{
+      id: string;
+      productId: string;
+      quantity: number;
+      unitPrice: string | number;
+    }>;
+  };
 }
 
 export interface VendorBillListResult {
