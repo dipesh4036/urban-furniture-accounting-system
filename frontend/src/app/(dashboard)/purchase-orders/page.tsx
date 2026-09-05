@@ -63,15 +63,15 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Purchase Orders</h1>
           <p className="text-sm text-muted-foreground">Orders placed with vendors.</p>
         </div>
         <PurchaseOrderFormDialog
           trigger={
-            <Button size="sm">
-              <Plus className="mr-2 size-4" />
+            <Button>
+              <Plus className="size-4" />
               New Purchase Order
             </Button>
           }
@@ -99,7 +99,7 @@ export default function PurchaseOrdersPage() {
           <PurchaseOrderFormDialog
             trigger={
               <Button size="sm" variant="outline">
-                <Plus className="mr-2 size-4" />
+                <Plus className="size-4" />
                 Create Purchase Order
               </Button>
             }

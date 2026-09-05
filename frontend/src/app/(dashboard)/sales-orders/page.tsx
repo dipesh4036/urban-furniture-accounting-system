@@ -63,7 +63,7 @@ export default function SalesOrdersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sales Orders</h1>
           <p className="text-sm text-muted-foreground">Orders received from customers.</p>
@@ -72,7 +72,7 @@ export default function SalesOrdersPage() {
         <SalesOrderFormDialog
           trigger={
             <Button>
-              <Plus className="size-4 mr-1.5" />
+              <Plus className="size-4" />
               New Sales Order
             </Button>
           }

@@ -59,7 +59,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex flex-col gap-1 border-b pb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Invoices</h1>
         <p className="text-sm text-muted-foreground">Invoices to collect from customers.</p>
       </div>

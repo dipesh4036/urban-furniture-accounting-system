@@ -83,7 +83,7 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Create User</h1>
           <p className="text-sm text-muted-foreground">Manage and provision staff accounts (Admin and Accountant).</p>
@@ -91,8 +91,8 @@ export default function UsersPage() {
 
         <UserFormDialog
           trigger={
-            <Button size="sm">
-              <Plus className="mr-2 size-4" />
+            <Button>
+              <Plus className="size-4" />
               Create User
             </Button>
           }

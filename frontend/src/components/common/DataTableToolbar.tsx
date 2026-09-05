@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X, RotateCcw } from "lucide-react";
+import { cn } from "cn";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,6 +103,7 @@ export function DataTableToolbar({
           const matchedOption = filter.options.find((opt) => opt.value === currentValue);
           const fallbackLabel = filter.title ?? filter.label ?? `All ${filter.key}s`;
           const displayLabel = matchedOption ? matchedOption.label : fallbackLabel;
+          const isFilterActive = currentValue !== "ALL" && currentValue !== "";
 
           return (
             <div key={filter.key} className="flex items-center">
@@ -113,7 +115,12 @@ export function DataTableToolbar({
                   }
                 }}
               >
-                <SelectTrigger className="h-9 min-w-[145px] sm:min-w-[160px] px-3 text-xs bg-background shadow-xs font-normal">
+                <SelectTrigger
+                  className={cn(
+                    "h-9 min-w-[145px] sm:min-w-[160px] px-3 text-xs bg-background shadow-xs font-normal transition-all",
+                    isFilterActive && "border-primary/50 bg-primary/5 text-primary font-medium ring-1 ring-primary/20"
+                  )}
+                >
                   <span className="truncate text-left flex-1">{displayLabel}</span>
                 </SelectTrigger>
                 <SelectContent>

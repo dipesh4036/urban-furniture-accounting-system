@@ -192,7 +192,7 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
               className="self-start mt-1"
               onClick={() => append({ ...emptySalesOrderItem })}
             >
-              <Plus className="mr-1.5 size-3.5" />
+              <Plus className="size-3.5" />
               Add product line
             </Button>
 

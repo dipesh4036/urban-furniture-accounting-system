@@ -46,7 +46,7 @@ export default function VendorBillsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex flex-col gap-1 border-b pb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Vendor Bills</h1>
         <p className="text-sm text-muted-foreground">Bills to pay vendors.</p>
       </div>

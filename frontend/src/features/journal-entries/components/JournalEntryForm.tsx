@@ -217,7 +217,7 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
               className="self-start mt-1"
               onClick={() => append({ ...emptyJournalItem })}
             >
-              <Plus className="mr-1.5 size-3.5" />
+              <Plus className="size-3.5" />
               Add line
             </Button>
 

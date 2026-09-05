@@ -82,7 +82,7 @@ export default function ContactsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
           <p className="text-sm text-muted-foreground">Manage your directory of customers and vendors.</p>
@@ -92,8 +92,8 @@ export default function ContactsPage() {
           <ViewToggle view={view} onViewChange={setView} />
           <ContactFormDialog
             trigger={
-              <Button size="sm">
-                <Plus className="mr-2 size-4" />
+              <Button>
+                <Plus className="size-4" />
                 New Contact
               </Button>
             }
@@ -124,7 +124,7 @@ export default function ContactsPage() {
           <ContactFormDialog
             trigger={
               <Button size="sm" variant="outline">
-                <Plus className="mr-2 size-4" />
+                <Plus className="size-4" />
                 Create your first contact
               </Button>
             }

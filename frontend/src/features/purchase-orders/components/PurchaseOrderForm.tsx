@@ -176,7 +176,7 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
               className="self-start mt-1"
               onClick={() => append({ ...emptyPurchaseOrderItem })}
             >
-              <Plus className="mr-1.5 size-3.5" />
+              <Plus className="size-3.5" />
               Add product line
             </Button>
 

@@ -55,7 +55,7 @@ export default function JournalsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Journals</h1>
           <p className="text-sm text-muted-foreground">Sales, purchase, bank, and cash journals.</p>

@@ -44,7 +44,7 @@ export default function JournalEntriesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Journal Entries</h1>
           <p className="text-sm text-muted-foreground">Manual debit/credit entries.</p>
@@ -53,7 +53,7 @@ export default function JournalEntriesPage() {
         <JournalEntryFormDialog
           trigger={
             <Button>
-              <Plus className="size-4 mr-1.5" />
+              <Plus className="size-4" />
               New Entry
             </Button>
           }

@@ -56,7 +56,7 @@ export default function AnalyticAccountsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Analytic Accounts</h1>
           <p className="text-sm text-muted-foreground">Cost/revenue centers Budgets are tracked against.</p>
@@ -66,8 +66,8 @@ export default function AnalyticAccountsPage() {
           <ViewToggle view={view} onViewChange={setView} />
           <AnalyticAccountFormDialog
             trigger={
-              <Button size="sm">
-                <Plus className="mr-2 size-4" />
+              <Button>
+                <Plus className="size-4" />
                 New Analytic Account
               </Button>
             }
