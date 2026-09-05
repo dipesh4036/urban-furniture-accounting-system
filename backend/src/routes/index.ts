@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { accountsRouter } from "./accounts.routes";
 import { authRouter } from "./auth.routes";
 
 // This is where every feature's routes get mounted. More get added here
@@ -7,3 +8,4 @@ import { authRouter } from "./auth.routes";
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/accounts", accountsRouter);
