@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoutButton } from "@/features/auth/components/LogoutButton";
 
 // Placeholder nav links for the staff dashboard. Matches the page list in
 // plan.md. Just static links for now - no active-link highlighting, no
@@ -45,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b px-6">
           <span className="text-sm text-muted-foreground">Dashboard</span>
-          <span className="text-sm text-muted-foreground">Account</span>
+          <LogoutButton />
         </header>
 
         <main className="flex-1 p-6">{children}</main>
