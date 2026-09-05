@@ -111,3 +111,75 @@ export async function getPurchaseOrderById(id: string) {
   }
   return po;
 }
+
+function generateBillNumber(): string {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  return `BILL-${timestamp}-${random}`;
+}
+
+export async function convertPurchaseOrderToBill(
+  poId: string,
+  input: { invoiceDate: Date; dueDate: Date }
+) {
+  const po = await prisma.purchaseOrder.findUnique({
+    where: { id: poId },
+    include: { items: true },
+  });
+  if (!po) {
+    throw new AppError(404, "Purchase order not found", "PURCHASE_ORDER_NOT_FOUND");
+  }
+
+  if (po.status !== "CONFIRMED") {
+    throw new AppError(
+      422,
+      `Purchase order status must be CONFIRMED, but is ${po.status}`,
+      "INVALID_PO_STATUS"
+    );
+  }
+
+  if (po.bill) {
+    throw new AppError(409, "This purchase order has already been converted to a bill", "BILL_ALREADY_EXISTS");
+  }
+
+  const totalAmount = po.items.reduce(
+    (sum, item) => sum + Number(item.unitPrice) * item.quantity,
+    0
+  );
+
+  let billNumber: string;
+  let attempts = 0;
+  while (attempts < 10) {
+    billNumber = generateBillNumber();
+    const existing = await prisma.vendorBill.findUnique({ where: { billNumber } });
+    if (!existing) break;
+    attempts++;
+  }
+  if (attempts === 10) {
+    throw new AppError(500, "Failed to generate unique bill number", "BILL_NUMBER_GENERATION_FAILED");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const bill = await tx.vendorBill.create({
+      data: {
+        billNumber,
+        purchaseOrderId: poId,
+        vendorId: po.vendorId,
+        invoiceDate: input.invoiceDate,
+        dueDate: input.dueDate,
+        totalAmount: new Prisma.Decimal(totalAmount),
+        status: "UNPAID",
+      },
+    });
+
+    await tx.purchaseOrder.update({
+      where: { id: poId },
+      data: { status: "BILLED" },
+    });
+
+    return tx.vendorBill.findUniqueOrThrow({
+      where: { id: bill.id },
+      include: { purchaseOrder: { include: { items: true } }, vendor: true, payments: true },
+    });
+  });
+}

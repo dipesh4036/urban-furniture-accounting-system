@@ -34,3 +34,14 @@ export const getPurchaseOrderByIdController = asyncHandler(async (req: Request, 
     timestamp: new Date().toISOString(),
   });
 });
+
+export const convertPurchaseOrderToBillController = asyncHandler(async (req: Request, res: Response) => {
+  const bill = await purchaseOrdersService.convertPurchaseOrderToBill(req.params.id, req.body);
+
+  res.status(201).json({
+    success: true,
+    message: "Purchase order converted to vendor bill successfully",
+    data: { vendorBill: bill },
+    timestamp: new Date().toISOString(),
+  });
+});
