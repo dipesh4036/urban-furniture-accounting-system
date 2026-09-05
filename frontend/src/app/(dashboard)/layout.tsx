@@ -92,23 +92,22 @@ function initialsFor(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+interface SidebarContentProps {
+  pathname: string;
+  filteredNavGroups: NavGroup[];
+  user: any;
+  isLoading: boolean;
+  onNavigate?: () => void;
+}
 
-  // Filter navigation items by the logged-in user's role. Non-admins (Accountants)
-  // never see the Settings / Users tab.
-  const userRole = user?.role;
-  const filteredNavGroups = navGroups
-    .filter((group) => !group.roles || (userRole && group.roles.includes(userRole as any)))
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !item.roles || (userRole && item.roles.includes(userRole as any))),
-    }))
-    .filter((group) => group.items.length > 0);
-
-  const SidebarContent = () => (
+function SidebarContent({
+  pathname,
+  filteredNavGroups,
+  user,
+  isLoading,
+  onNavigate,
+}: SidebarContentProps) {
+  return (
     <>
       <div className="flex h-16 shrink-0 items-center px-6">
         <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-90">
@@ -142,7 +141,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      scroll={false}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -181,6 +181,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </>
   );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Filter navigation items by the logged-in user's role. Non-admins (Accountants)
+  // never see the Settings / Users tab.
+  const userRole = user?.role;
+  const filteredNavGroups = navGroups
+    .filter((group) => !group.roles || (userRole && group.roles.includes(userRole as any)))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || (userRole && item.roles.includes(userRole as any))),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
@@ -226,18 +243,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="sr-only">Close sidebar</span>
               </button>
             </div>
-            <SidebarContent />
+            <SidebarContent
+              pathname={pathname}
+              filteredNavGroups={filteredNavGroups}
+              user={user}
+              isLoading={isLoading}
+              onNavigate={() => setIsMobileMenuOpen(false)}
+            />
           </div>
         </div>
       )}
 
       {/* Desktop Sidebar */}
       <aside className="hidden w-72 shrink-0 flex-col border-r bg-background lg:flex sticky top-0 h-screen">
-        <SidebarContent />
+        <SidebarContent
+          pathname={pathname}
+          filteredNavGroups={filteredNavGroups}
+          user={user}
+          isLoading={isLoading}
+        />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-muted/20">
+      <main className="flex-1 min-w-0 bg-muted/20">
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           {children}
         </div>

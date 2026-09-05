@@ -12,6 +12,7 @@ export const productFormSchema = z.object({
   salesPrice: z.coerce.number({ message: "Sales price is required" }).positive("Sales price must be positive"),
   costPrice: z.coerce.number({ message: "Cost price is required" }).positive("Cost price must be positive"),
   category: z.string().min(1, "Category is required"),
+  image: z.string().optional().nullable(),
 });
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;

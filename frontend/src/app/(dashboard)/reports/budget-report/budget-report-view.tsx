@@ -171,12 +171,15 @@ export function BudgetReportView() {
     router.replace(`?${params.toString()}`);
   }
 
-  const [selectedBudgetForChart, setSelectedBudgetForChart] = useState<Budget | null>(null);
+  const [selectedBudgetForChart, setSelectedBudgetForChart] = useState<{
+    budget: Budget;
+    achievedAmount: number;
+  } | null>(null);
 
   // Derive consolidated metrics
   const totalPlanned = data?.budgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) ?? 0;
   const totalAchieved = data?.budgets.reduce((sum, b) => {
-    const act = b.actualAmount !== null ? Number(b.actualAmount) : Number(b.plannedAmount) * 0.62;
+    const act = b.actualAmount !== null ? Number(b.actualAmount) : 0;
     return sum + act;
   }, 0) ?? 0;
 
@@ -271,84 +274,103 @@ export function BudgetReportView() {
       {!isLoading && !isError && data && data.budgets.length > 0 && (
         <>
           {view === "list" ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Budget</TableHead>
-                  <TableHead>Analytic Account</TableHead>
-                  <TableHead>Responsible Person</TableHead>
-                  <TableHead className="text-right">Planned (₹)</TableHead>
-                  <TableHead className="text-right">Actual (₹)</TableHead>
-                  <TableHead className="text-right">Variance (₹)</TableHead>
-                  <TableHead className="text-center">Pie Chart</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.budgets.map((b) => {
-                  const planned = Number(b.plannedAmount);
-                  const achieved = b.actualAmount !== null ? Number(b.actualAmount) : planned * 0.62;
+            <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
+              <Table className="w-full table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[23%]">Budget</TableHead>
+                    <TableHead className="w-[23%]">Analytic Account</TableHead>
+                    <TableHead className="w-[16%]">Manager</TableHead>
+                    <TableHead className="w-[12%] text-right">Planned (₹)</TableHead>
+                    <TableHead className="w-[10%] text-right">Actual (₹)</TableHead>
+                    <TableHead className="w-[10%] text-right">Variance (₹)</TableHead>
+                    <TableHead className="w-[6%] text-center">Chart</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.budgets.map((b) => {
+                    const planned = Number(b.plannedAmount);
+                    const achieved = b.actualAmount !== null ? Number(b.actualAmount) : 0;
 
-                  // Synthesize a Budget object for the modal
-                  const budgetObj: Budget = {
-                    id: b.budgetId,
-                    name: b.budgetName,
-                    period,
-                    plannedAmount: b.plannedAmount,
-                    analyticAccountId: b.budgetId,
-                    analyticAccount: {
+                    // Synthesize a Budget object for the modal
+                    const budgetObj: Budget = {
                       id: b.budgetId,
-                      name: b.analyticAccountName,
-                      type: b.analyticAccountType as any,
+                      name: b.budgetName,
+                      period,
+                      plannedAmount: b.plannedAmount,
+                      analyticAccountId: b.budgetId,
+                      analyticAccount: {
+                        id: b.budgetId,
+                        name: b.analyticAccountName,
+                        type: b.analyticAccountType as any,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      },
+                      responsiblePersonId: b.responsiblePerson.id,
+                      responsiblePerson: {
+                        id: b.responsiblePerson.id,
+                        name: b.responsiblePerson.name,
+                        loginId: b.responsiblePerson.loginId,
+                        email: "",
+                        role: "ACCOUNTANT" as any,
+                      },
                       createdAt: new Date().toISOString(),
                       updatedAt: new Date().toISOString(),
-                    },
-                    responsiblePersonId: b.responsiblePerson.id,
-                    responsiblePerson: {
-                      id: b.responsiblePerson.id,
-                      name: b.responsiblePerson.name,
-                      loginId: b.responsiblePerson.loginId,
-                      email: "",
-                      role: "ACCOUNTANT" as any,
-                    },
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  };
+                    };
 
-                  return (
-                    <TableRow key={b.budgetId}>
-                      <TableCell className="font-medium">{b.budgetName}</TableCell>
-                      <TableCell>
-                        {b.analyticAccountName}{" "}
-                        <Badge variant="outline" className="ml-1">
-                          {b.analyticAccountType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{b.responsiblePerson.name}</TableCell>
-                      <TableCell className="text-right">{formatAmount(b.plannedAmount)}</TableCell>
-                      <TableCell className="text-right">{formatAmount(b.actualAmount)}</TableCell>
-                      <TableCell className="text-right">{formatAmount(b.variance)}</TableCell>
-                      <TableCell
-                        className="text-center py-2 cursor-pointer"
-                        onClick={() => setSelectedBudgetForChart(budgetObj)}
-                        title="Click to view Achieved vs Balance Pie Chart"
-                      >
-                        <div className="flex items-center justify-center">
-                          <div className="p-1 rounded-full hover:bg-sky-500/10 transition-colors">
-                            <BudgetPieChart
-                              plannedAmount={planned}
-                              achievedAmount={achieved}
-                              size="mini"
-                              showLabels={false}
-                              interactive={false}
-                            />
+                    return (
+                      <TableRow key={b.budgetId}>
+                        <TableCell className="font-semibold text-foreground truncate" title={b.budgetName}>
+                          <span className="truncate block">{b.budgetName}</span>
+                        </TableCell>
+                        <TableCell title={`${b.analyticAccountName} (${b.analyticAccountType})`}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="truncate font-medium">{b.analyticAccountName}</span>
+                            <Badge variant="outline" className="text-[10px] shrink-0 uppercase">
+                              {b.analyticAccountType}
+                            </Badge>
                           </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground truncate" title={b.responsiblePerson.name}>
+                          <span className="truncate block">{b.responsiblePerson.name}</span>
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-foreground tabular-nums whitespace-nowrap">
+                          ₹{formatAmount(b.plannedAmount)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums whitespace-nowrap">
+                          {b.actualAmount !== null ? `₹${formatAmount(b.actualAmount)}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums whitespace-nowrap">
+                          {b.variance !== null ? `₹${formatAmount(b.variance)}` : "-"}
+                        </TableCell>
+                        <TableCell
+                          className="text-center py-2 px-1 cursor-pointer"
+                          onClick={() =>
+                            setSelectedBudgetForChart({
+                              budget: budgetObj,
+                              achievedAmount: achieved,
+                            })
+                          }
+                          title="Click to view Achieved vs Balance Pie Chart"
+                        >
+                          <div className="flex items-center justify-center">
+                            <div className="p-1 rounded-full hover:bg-sky-500/10 transition-colors">
+                              <BudgetPieChart
+                                plannedAmount={planned}
+                                achievedAmount={achieved}
+                                size="mini"
+                                showLabels={false}
+                                interactive={false}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {data.budgets.map((budget) => (
@@ -398,12 +420,8 @@ export function BudgetReportView() {
       )}
 
       <BudgetPieChartModal
-        budget={selectedBudgetForChart}
-        achievedAmount={
-          selectedBudgetForChart
-            ? Number(selectedBudgetForChart.plannedAmount) * 0.62
-            : 0
-        }
+        budget={selectedBudgetForChart?.budget ?? null}
+        achievedAmount={selectedBudgetForChart?.achievedAmount ?? 0}
         open={!!selectedBudgetForChart}
         onOpenChange={(open) => !open && setSelectedBudgetForChart(null)}
       />

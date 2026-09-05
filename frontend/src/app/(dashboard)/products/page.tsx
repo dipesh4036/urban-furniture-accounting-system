@@ -16,6 +16,7 @@ import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ProductFormDialog } from "@/features/products/components/ProductFormDialog";
 import { useArchiveProduct, useProducts } from "@/features/products/hooks/useProducts";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
+import { toFileUrl } from "@/lib/api";
 import type { ProductType } from "@/features/products/services/products.service";
 
 function formatPrice(value: string): string {
@@ -171,7 +172,23 @@ export default function ProductsPage() {
                     <TableBody>
                       {paginatedData.map((product) => (
                         <TableRow key={product.id}>
-                          <TableCell className="font-semibold text-foreground">{product.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              {product.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={toFileUrl(product.image)}
+                                  alt={product.name}
+                                  className="size-9 rounded-lg object-cover border border-border/60 shrink-0"
+                                />
+                              ) : (
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-xs border border-border/40">
+                                  <Package className="size-4.5 text-primary/70" />
+                                </div>
+                              )}
+                              <span className="font-semibold text-foreground">{product.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <StatusBadge status={product.type} showDot={false} size="sm" />
                           </TableCell>
@@ -223,9 +240,18 @@ export default function ProductsPage() {
                       <Card key={product.id} className="flex flex-col justify-between transition-all hover:shadow-md">
                         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                           <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                              <Package className="size-5" />
-                            </div>
+                            {product.image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={toFileUrl(product.image)}
+                                alt={product.name}
+                                className="size-11 rounded-lg object-cover border border-border/60 shrink-0"
+                              />
+                            ) : (
+                              <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Package className="size-5" />
+                              </div>
+                            )}
                             <div>
                               <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
                               <div className="mt-1 flex flex-wrap gap-1.5">
