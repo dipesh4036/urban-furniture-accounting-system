@@ -11,6 +11,10 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required"),
+  SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
+  SMTP_PORT: z.coerce.number().int().positive(),
+  SMTP_USER: z.string().min(1, "SMTP_USER is required"),
+  SMTP_PASS: z.string().min(1, "SMTP_PASS is required"),
 });
 
 const parsed = envSchema.safeParse(process.env);
