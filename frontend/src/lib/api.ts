@@ -8,6 +8,20 @@ export const api = axios.create({
   withCredentials: true, // send the auth cookie on every request
 });
 
+// NEXT_PUBLIC_API_URL is "http://localhost:5000/api/v1" - uploaded files
+// (e.g. a Contact's profile image) are served from the backend's origin
+// directly, not under /api/v1, so this strips that suffix off.
+const API_ORIGIN = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000").origin;
+
+// Turns a path the backend returned (e.g. "/uploads/abc123.jpg") into a
+// full URL an <img> tag can load. Already-full URLs are returned as-is.
+export function toFileUrl(pathOrUrl: string): string {
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://") || pathOrUrl.startsWith("data:")) {
+    return pathOrUrl;
+  }
+  return `${API_ORIGIN}${pathOrUrl}`;
+}
+
 api.interceptors.response.use(
   // The backend always replies with { success: true, message, data, timestamp }
   // on success. We don't want every service file to keep writing

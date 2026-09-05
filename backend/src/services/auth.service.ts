@@ -144,8 +144,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   });
 }
 
-// Which kind of account a token belongs to. Right now only "USER" is
-// ever actually returned - see the TODO in activateAccount below.
+// Which kind of account a token belongs to.
 type TokenAudience = "USER" | "CONTACT";
 
 // One shared "set your password from a token" endpoint, meant to serve
@@ -154,8 +153,7 @@ type TokenAudience = "USER" | "CONTACT";
 //   the password directly on Create User - but built out here anyway so
 //   the shared token flow has a working reference implementation.
 // - CONTACT: a Contact activates their account this way after an
-//   Admin/Accountant creates them in Contact Master. NOT WIRED UP YET -
-//   the Contact model doesn't exist until the feat/contact-master branch.
+//   Admin/Accountant creates them in Contact Master (feat/contact-master).
 export async function activateAccount(token: string, newPassword: string): Promise<void> {
   const audience = await resolveTokenAudience(token);
 
@@ -176,12 +174,24 @@ export async function activateAccount(token: string, newPassword: string): Promi
     return;
   }
 
-  // TODO(feat/contact-master): this branch is currently unreachable -
-  // resolveTokenAudience() has no way to return "CONTACT" yet. Once the
-  // Contact model exists, look up the Contact by activationToken here,
-  // check activationTokenExpiresAt, then set Contact.passwordHash,
-  // isActivated = true, and clear activationToken/activationTokenExpiresAt.
-  throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+  const contact = await prisma.contact.findFirst({
+    where: { activationToken: token, activationTokenExpiresAt: { gt: new Date() } },
+  });
+
+  if (!contact) {
+    throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.contact.update({
+    where: { id: contact.id },
+    data: {
+      passwordHash,
+      isActivated: true,
+      activationToken: null,
+      activationTokenExpiresAt: null,
+    },
+  });
 }
 
 async function resolveTokenAudience(token: string): Promise<TokenAudience> {
@@ -190,7 +200,62 @@ async function resolveTokenAudience(token: string): Promise<TokenAudience> {
     return "USER";
   }
 
-  // TODO(feat/contact-master): once Contact exists, check
-  // Contact.activationToken here and return "CONTACT" if it matches.
-  return "USER";
+  // Fall through to CONTACT - activateAccount() itself re-checks the
+  // token (and its expiry) against the Contact table and throws a clean
+  // 400 if nothing matches there either, so returning "CONTACT" here
+  // even when no Contact has this token is safe.
+  return "CONTACT";
+}
+
+interface SafeContact {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  role: "CONTACT";
+}
+
+interface ContactLoginResult {
+  accessToken: string;
+  refreshToken: string;
+  contact: SafeContact;
+}
+
+// Same shape as login() above, but against the Contact table instead of
+// User, and only lets an activated Contact in (isActivated implies
+// passwordHash is set - the two are always changed together in
+// activateAccount()).
+export async function contactLogin(email: string, password: string): Promise<ContactLoginResult> {
+  const contact = await prisma.contact.findUnique({ where: { email } });
+
+  if (!contact || !contact.isActive) {
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+  }
+
+  if (!contact.isActivated || !contact.passwordHash) {
+    throw new AppError(
+      403,
+      "This account hasn't been activated yet. Check your email for the activation link",
+      "ACCOUNT_NOT_ACTIVATED"
+    );
+  }
+
+  const passwordMatches = await comparePassword(password, contact.passwordHash);
+  if (!passwordMatches) {
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
+  }
+
+  const tokenPayload: TokenPayload = { sub: contact.id, role: "CONTACT" };
+
+  return {
+    accessToken: issueAccessToken(tokenPayload),
+    refreshToken: issueRefreshToken(tokenPayload),
+    contact: {
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      type: contact.type,
+      role: "CONTACT",
+    },
+  };
 }

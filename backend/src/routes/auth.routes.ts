@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   activateAccountController,
+  contactLoginController,
   forgotPasswordController,
   loginController,
   logoutController,
@@ -9,11 +10,17 @@ import {
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
-import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "../validators/auth.validator";
+import {
+  contactLoginSchema,
+  forgotPasswordSchema,
+  loginSchema,
+  resetPasswordSchema,
+} from "../validators/auth.validator";
 
 export const authRouter = Router();
 
 authRouter.post("/login", validate(loginSchema), loginController);
+authRouter.post("/contact-login", validate(contactLoginSchema), contactLoginController);
 authRouter.post("/logout", logoutController);
 authRouter.get("/me", authenticate, meController);
 authRouter.post("/forgot-password", validate(forgotPasswordSchema), forgotPasswordController);
