@@ -22,8 +22,11 @@ import { addCertificationBlock, addReportTable, createReportDoc, finalizeReportD
 // "-" for null, not "0.00" - a null actual/variance means it genuinely
 // hasn't been computed yet (no analytic linkage on JournalItem), which
 // is a different thing than an actual zero.
-function formatAmount(value: string | null): string {
-  return value === null ? "-" : Number(value).toFixed(2);
+function formatAmount(value: string | null | number): string {
+  return value === null ? "-" : Number(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function defaultPeriod(): string {
@@ -46,20 +49,20 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
       kpiCards: [
         {
           label: "Total Planned",
-          value: `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `INR ${totalPlanned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           subtext: `${data.budgets.length} Targets`,
           variant: "default",
         },
         {
           label: "Expense Budgets",
           value: `${expenseBudgets.length} Centers`,
-          subtext: `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+          subtext: `INR ${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
           variant: "warning",
         },
         {
           label: "Revenue Goals",
           value: `${incomeBudgets.length} Targets`,
-          subtext: `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+          subtext: `INR ${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
           variant: "success",
         },
         {
@@ -78,23 +81,23 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
   y = addReportTable(
     doc,
     y,
-    ["Budget Line", "Analytic Cost Center", "Category", "Responsible Manager", "Planned (USD)", "Actual (USD)", "Variance (USD)"],
+    ["Budget Line", "Analytic Cost Center", "Category", "Responsible Manager", "Planned (INR)", "Actual (INR)", "Variance (INR)"],
     [
       ...data.budgets.map((b) => [
         b.budgetName,
         b.analyticAccountName,
         b.analyticAccountType,
         b.responsiblePerson.name,
-        `$${formatAmount(b.plannedAmount)}`,
-        b.actualAmount === null ? "-" : `$${formatAmount(b.actualAmount)}`,
-        b.variance === null ? "-" : `$${formatAmount(b.variance)}`,
+        `INR ${formatAmount(b.plannedAmount)}`,
+        b.actualAmount === null ? "-" : `INR ${formatAmount(b.actualAmount)}`,
+        b.variance === null ? "-" : `INR ${formatAmount(b.variance)}`,
       ]),
       [
         "TOTAL PLANNED BUDGET",
         "",
         "",
         "",
-        `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `INR ${totalPlanned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         "-",
         "-",
       ],
@@ -111,12 +114,12 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
   y = addReportTable(
     doc,
     y + 6,
-    ["Department Classification", "Allocated Centers", "Total Planned Allocation (USD)", "Budget Share"],
+    ["Department Classification", "Allocated Centers", "Total Planned Allocation (INR)", "Budget Share"],
     [
       [
         "Operational & Expense Departments",
         `${expenseBudgets.length} Accounts`,
-        `$${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        `INR ${expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
         totalPlanned > 0
           ? `${((expenseBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) / totalPlanned) * 100).toFixed(1)}%`
           : "0.0%",
@@ -124,7 +127,7 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
       [
         "Revenue & Commercial Targets",
         `${incomeBudgets.length} Accounts`,
-        `$${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        `INR ${incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
         totalPlanned > 0
           ? `${((incomeBudgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) / totalPlanned) * 100).toFixed(1)}%`
           : "0.0%",
@@ -132,7 +135,7 @@ async function downloadBudgetReportPdf(period: string, data: BudgetReportResult)
       [
         "TOTAL CONSOLIDATED ALLOCATION",
         `${data.budgets.length} Cost Centers`,
-        `$${totalPlanned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `INR ${totalPlanned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         "100.0%",
       ],
     ],
@@ -229,15 +232,15 @@ export function BudgetReportView() {
             <div className="border-t pt-2 mt-1 space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Planned:</span>
-                <span className="font-semibold">${totalPlanned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">₹{totalPlanned.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-sky-600 dark:text-sky-400">
                 <span className="font-medium">Total Achieved:</span>
-                <span className="font-semibold">${totalAchieved.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">₹{totalAchieved.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-rose-600 dark:text-rose-400">
                 <span className="font-medium">Total Balance:</span>
-                <span className="font-semibold">${Math.max(0, totalPlanned - totalAchieved).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">₹{Math.max(0, totalPlanned - totalAchieved).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -274,9 +277,9 @@ export function BudgetReportView() {
                   <TableHead>Budget</TableHead>
                   <TableHead>Analytic Account</TableHead>
                   <TableHead>Responsible Person</TableHead>
-                  <TableHead className="text-right">Planned</TableHead>
-                  <TableHead className="text-right">Actual</TableHead>
-                  <TableHead className="text-right">Variance</TableHead>
+                  <TableHead className="text-right">Planned (₹)</TableHead>
+                  <TableHead className="text-right">Actual (₹)</TableHead>
+                  <TableHead className="text-right">Variance (₹)</TableHead>
                   <TableHead className="text-center">Pie Chart</TableHead>
                 </TableRow>
               </TableHeader>
@@ -375,15 +378,15 @@ export function BudgetReportView() {
                     <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-2.5 text-center">
                       <div>
                         <p className="text-[11px] font-medium text-muted-foreground">Planned</p>
-                        <p className="font-semibold text-foreground">${formatAmount(budget.plannedAmount)}</p>
+                        <p className="font-semibold text-foreground">₹{formatAmount(budget.plannedAmount)}</p>
                       </div>
                       <div>
                         <p className="text-[11px] font-medium text-muted-foreground">Actual</p>
-                        <p className="font-semibold text-foreground">${formatAmount(budget.actualAmount)}</p>
+                        <p className="font-semibold text-foreground">₹{formatAmount(budget.actualAmount)}</p>
                       </div>
                       <div>
                         <p className="text-[11px] font-medium text-muted-foreground">Variance</p>
-                        <p className="font-semibold text-foreground">${formatAmount(budget.variance)}</p>
+                        <p className="font-semibold text-foreground">₹{formatAmount(budget.variance)}</p>
                       </div>
                     </div>
                   </CardContent>

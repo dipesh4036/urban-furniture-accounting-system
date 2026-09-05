@@ -121,11 +121,11 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
                 <RequiredMark />
               </span>
               <span>
-                Unit Price ($)
+                Unit Price (₹)
                 <RequiredMark />
               </span>
               <span>
-                Tax ($)
+                Tax (₹)
                 <RequiredMark />
               </span>
               <span />
@@ -205,7 +205,7 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
       {/* Summary Row */}
       <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm">
         <span className="font-medium text-muted-foreground">Order Total (incl. tax)</span>
-        <span className="text-base font-semibold tracking-tight">${total.toFixed(2)}</span>
+        <span className="text-base font-semibold tracking-tight">₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
 
       <div

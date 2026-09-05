@@ -128,13 +128,13 @@ export default function PortalBillsPage() {
                       </TableCell>
                       <TableCell>{statusBadge(bill.status)}</TableCell>
                       <TableCell className="text-right font-medium">
-                        ${total.toFixed(2)}
+                        ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         {balanceDue === 0 ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">$0.00</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
                         ) : (
-                          <span className="text-foreground">${balanceDue.toFixed(2)}</span>
+                          <span className="text-foreground">₹{balanceDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -213,13 +213,13 @@ export default function PortalBillsPage() {
                   <div>
                     <span className="text-xs text-muted-foreground">Total Amount</span>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      ${Number(selectedBill.totalAmount).toFixed(2)}
+                      ₹{Number(selectedBill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Balance Due</span>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      ${Math.max(0, Number(selectedBill.totalAmount) - calculatePaidAmount(selectedBill)).toFixed(2)}
+                      ₹{Math.max(0, Number(selectedBill.totalAmount) - calculatePaidAmount(selectedBill)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -250,8 +250,8 @@ export default function PortalBillsPage() {
                           <TableRow className="bg-muted/40">
                             <TableHead className="text-xs font-medium">Item</TableHead>
                             <TableHead className="text-xs font-medium text-right">Qty</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Unit Price</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Total</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Unit Price (₹)</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Total (₹)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -261,8 +261,8 @@ export default function PortalBillsPage() {
                               <TableRow key={item.id || idx}>
                                 <TableCell className="text-xs font-medium">Item #{idx + 1}</TableCell>
                                 <TableCell className="text-xs text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-xs text-right">${Number(item.unitPrice).toFixed(2)}</TableCell>
-                                <TableCell className="text-xs text-right font-medium">${lineTotal.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-right">₹{Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-xs text-right font-medium">₹{lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             );
                           })}
@@ -285,7 +285,7 @@ export default function PortalBillsPage() {
                             <TableHead className="text-xs font-medium">Date</TableHead>
                             <TableHead className="text-xs font-medium">Method</TableHead>
                             <TableHead className="text-xs font-medium">Type</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Amount</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Amount (₹)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -297,7 +297,7 @@ export default function PortalBillsPage() {
                               <TableCell className="text-xs font-medium">{p.method}</TableCell>
                               <TableCell className="text-xs text-muted-foreground">{p.type}</TableCell>
                               <TableCell className="text-xs text-right font-semibold text-emerald-600 dark:text-emerald-400">
-                                +${Number(p.amount).toFixed(2)}
+                                +₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
                             </TableRow>
                           ))}

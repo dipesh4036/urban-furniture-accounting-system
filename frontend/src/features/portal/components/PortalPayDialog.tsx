@@ -130,14 +130,14 @@ export function PortalPayDialog({
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border text-sm">
             <span className="text-muted-foreground">Outstanding Balance</span>
             <span className="text-base font-bold text-foreground">
-              ${balanceDue.toFixed(2)}
+              ₹{balanceDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
           {/* Amount input */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="amount" className="text-xs font-semibold">
-              Payment Amount ($)
+              Payment Amount (₹)
               <RequiredMark />
             </Label>
             <Input

@@ -155,11 +155,11 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
                 <RequiredMark />
               </span>
               <span>
-                Debit ($)
+                Debit (₹)
                 <RequiredMark />
               </span>
               <span>
-                Credit ($)
+                Credit (₹)
                 <RequiredMark />
               </span>
               <span />
@@ -232,11 +232,11 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Total Debit</span>
-            <span className="font-semibold text-foreground">${totalDebit.toFixed(2)}</span>
+            <span className="font-semibold text-foreground">₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Total Credit</span>
-            <span className="font-semibold text-foreground">${totalCredit.toFixed(2)}</span>
+            <span className="font-semibold text-foreground">₹{totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
 
@@ -244,11 +244,11 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
           <span className="text-xs text-muted-foreground">Status:</span>
           {isBalanced ? (
             <span className="inline-flex items-center rounded-md bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-              Balanced (Diff: $0.00)
+              Balanced (Diff: ₹0.00)
             </span>
           ) : (
             <span className="inline-flex items-center rounded-md bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
-              Unbalanced (Diff: ${Math.abs(difference).toFixed(2)})
+              Unbalanced (Diff: ₹{Math.abs(difference).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
             </span>
           )}
         </div>

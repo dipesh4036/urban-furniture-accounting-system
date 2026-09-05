@@ -82,7 +82,7 @@ export default function SalesOrdersPage() {
               <TableHead>Customer</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total (₹)</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -96,7 +96,7 @@ export default function SalesOrdersPage() {
                 <TableCell>
                   <Badge variant={statusVariant(so.status)}>{so.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{soTotal(so).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{soTotal(so).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     {so.status === "DRAFT" && (

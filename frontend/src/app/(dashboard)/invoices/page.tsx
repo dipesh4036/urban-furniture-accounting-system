@@ -54,7 +54,7 @@ export default function InvoicesPage() {
               <TableHead>Customer</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Amount (₹)</TableHead>
               <TableHead>Email Sent</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -68,7 +68,7 @@ export default function InvoicesPage() {
                 <TableCell>
                   <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{Number(invoice.totalAmount).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{Number(invoice.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell>
                   {invoice.emailSentAt ? (
                     <CheckCircle2 className="size-4 text-success" aria-label="Email sent" />

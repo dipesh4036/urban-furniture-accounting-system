@@ -183,7 +183,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="salesPrice">
-                  Sales Price ($)
+                  Sales Price (₹)
                   <RequiredMark />
                 </Label>
                 <Input
@@ -200,7 +200,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="costPrice">
-                  Cost Price ($)
+                  Cost Price (₹)
                   <RequiredMark />
                 </Label>
                 <Input

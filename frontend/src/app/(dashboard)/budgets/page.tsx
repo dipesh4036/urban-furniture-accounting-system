@@ -218,7 +218,7 @@ export default function BudgetsPage() {
                 <TableHead className="w-[16%] font-semibold text-foreground">Start Date</TableHead>
                 <TableHead className="w-[16%] font-semibold text-foreground">End Date</TableHead>
                 <TableHead className="w-[14%] font-semibold text-foreground">Status</TableHead>
-                <TableHead className="w-[14%] text-right font-semibold text-foreground">Planned</TableHead>
+                <TableHead className="w-[14%] text-right font-semibold text-foreground">Planned (₹)</TableHead>
                 <TableHead className="w-[12%] text-center font-semibold text-foreground">Pie Chart</TableHead>
               </TableRow>
             </TableHeader>
@@ -270,7 +270,7 @@ export default function BudgetsPage() {
 
                     {/* Planned Amount */}
                     <TableCell className="text-right font-medium">
-                      ${planned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
 
                     {/* Pie Chart Column with interactive thumbnail */}
@@ -356,7 +356,7 @@ export default function BudgetsPage() {
 
                 {/* Footer with Planned Target & Open Form View hint */}
                 <div className="mt-4 border-t pt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Planned: <strong className="text-foreground">${planned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                  <span>Planned: <strong className="text-foreground">₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</strong></span>
                   <span className="text-[11px] font-medium text-primary group-hover:underline">
                     Open Form View →
                   </span>

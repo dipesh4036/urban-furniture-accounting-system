@@ -21,8 +21,11 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatAmount(value: string): string {
-  return Number(value).toFixed(2);
+function formatAmount(value: string | number): string {
+  return Number(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossReport) {
@@ -36,24 +39,24 @@ async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossR
 
   const doc = await createReportDoc(
     "Profit & Loss Statement",
-    `Reporting Period: ${from} to ${to} • Accrual Accounting Basis • General Ledger Verified`,
+    `Reporting Period: ${from} to ${to} • Ind AS Accrual Accounting Basis • General Ledger Verified`,
     {
       kpiCards: [
         {
           label: "Total Revenue",
-          value: `$${formatAmount(data.totalIncome)}`,
+          value: `INR ${formatAmount(data.totalIncome)}`,
           subtext: `${data.income.length} Income Streams`,
           variant: "default",
         },
         {
           label: "Total Expenses",
-          value: `$${formatAmount(data.totalExpenses)}`,
+          value: `INR ${formatAmount(data.totalExpenses)}`,
           subtext: `${expenseRatio}% Expense Ratio`,
           variant: "warning",
         },
         {
           label: "Net Profit",
-          value: `${isProfitable ? "+" : ""}$${formatAmount(data.netProfit)}`,
+          value: `${isProfitable ? "+" : ""}INR ${formatAmount(data.netProfit)}`,
           subtext: `${marginPercent}% Margin`,
           variant: isProfitable ? "success" : "danger",
         },
@@ -73,10 +76,10 @@ async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossR
   y = addReportTable(
     doc,
     y,
-    ["Revenue Stream / Account", "Category", "Account ID", "Amount (USD)"],
+    ["Revenue Stream / Account", "Category", "Account ID", "Amount (INR)"],
     [
-      ...data.income.map((a) => [a.accountName, "Operating Revenue", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.amount)}`]),
-      ["TOTAL OPERATING REVENUE", "", "", `$${formatAmount(data.totalIncome)}`],
+      ...data.income.map((a) => [a.accountName, "Operating Revenue", a.accountId.slice(-8).toUpperCase(), `INR ${formatAmount(a.amount)}`]),
+      ["TOTAL OPERATING REVENUE", "", "", `INR ${formatAmount(data.totalIncome)}`],
     ],
     {
       sectionTitle: "Revenue & Operating Income",
@@ -90,10 +93,10 @@ async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossR
   y = addReportTable(
     doc,
     y + 6,
-    ["Expense Account", "Classification", "Account ID", "Amount (USD)"],
+    ["Expense Account", "Classification", "Account ID", "Amount (INR)"],
     [
-      ...data.expenses.map((a) => [a.accountName, "Operations & Overhead", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.amount)}`]),
-      ["TOTAL OPERATING EXPENSES", "", "", `$${formatAmount(data.totalExpenses)}`],
+      ...data.expenses.map((a) => [a.accountName, "Operations & Overhead", a.accountId.slice(-8).toUpperCase(), `INR ${formatAmount(a.amount)}`]),
+      ["TOTAL OPERATING EXPENSES", "", "", `INR ${formatAmount(data.totalExpenses)}`],
     ],
     {
       sectionTitle: "Operating & Overhead Expenses",
@@ -107,11 +110,11 @@ async function downloadProfitLossPdf(from: string, to: string, data: ProfitLossR
   y = addReportTable(
     doc,
     y + 6,
-    ["Performance Breakdown", "Financial Calculation", "Total (USD)"],
+    ["Performance Breakdown", "Financial Calculation", "Total (INR)"],
     [
-      ["Gross Operating Income", "Total Earned Revenue", `$${formatAmount(data.totalIncome)}`],
-      ["Less: Direct & Operating Expenses", "Cost of Sales, Salaries & Facilities", `($${formatAmount(data.totalExpenses)})`],
-      ["NET OPERATING PROFIT / (LOSS)", "Income minus Operating Expenses", `$${formatAmount(data.netProfit)}`],
+      ["Gross Operating Income", "Total Earned Revenue", `INR ${formatAmount(data.totalIncome)}`],
+      ["Less: Direct & Operating Expenses", "Cost of Sales, Salaries & Facilities", `(INR ${formatAmount(data.totalExpenses)})`],
+      ["NET OPERATING PROFIT / (LOSS)", "Income minus Operating Expenses", `INR ${formatAmount(data.netProfit)}`],
     ],
     {
       sectionTitle: "Net Earnings Summary",
@@ -136,7 +139,7 @@ function Section({ title, accounts, total }: { title: string; accounts: ProfitLo
         <TableHeader>
           <TableRow>
             <TableHead>Account</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="text-right">Amount (₹)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -150,13 +153,13 @@ function Section({ title, accounts, total }: { title: string; accounts: ProfitLo
             accounts.map((account) => (
               <TableRow key={account.accountId}>
                 <TableCell>{account.accountName}</TableCell>
-                <TableCell className="text-right">{formatAmount(account.amount)}</TableCell>
+                <TableCell className="text-right">₹{formatAmount(account.amount)}</TableCell>
               </TableRow>
             ))
           )}
           <TableRow>
             <TableCell className="font-medium">Total {title}</TableCell>
-            <TableCell className="text-right font-medium">{formatAmount(total)}</TableCell>
+            <TableCell className="text-right font-medium">₹{formatAmount(total)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -248,7 +251,7 @@ export function ProfitLossView() {
           <div className="flex justify-between gap-8 self-end rounded-lg border p-4 text-sm">
             <span className="font-semibold">Net Profit</span>
             <span className={`font-semibold ${isProfit ? "text-success" : "text-destructive"}`}>
-              {formatAmount(data.netProfit)}
+              {isProfit ? "" : "-"}₹{formatAmount(Math.abs(Number(data.netProfit)))}
             </span>
           </div>
         </div>

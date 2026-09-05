@@ -7,8 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { JournalEntryFormDialog } from "@/features/journal-entries/components/JournalEntryFormDialog";
 import { useJournalEntries } from "@/features/journal-entries/hooks/useJournalEntries";
 
-function formatAmount(value: string): string {
-  return Number(value).toFixed(2);
+function formatAmount(value: string | number): string {
+  return Number(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function JournalEntriesPage() {
@@ -61,8 +64,8 @@ export default function JournalEntriesPage() {
               <TableHead>Date</TableHead>
               <TableHead>Reference</TableHead>
               <TableHead>Lines</TableHead>
-              <TableHead className="text-right">Total Debit</TableHead>
-              <TableHead className="text-right">Total Credit</TableHead>
+              <TableHead className="text-right">Total Debit (₹)</TableHead>
+              <TableHead className="text-right">Total Credit (₹)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -75,8 +78,8 @@ export default function JournalEntriesPage() {
                   <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                   <TableCell className="font-medium">{entry.reference}</TableCell>
                   <TableCell>{entry.items.length}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totalDebit.toString())}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totalCredit.toString())}</TableCell>
+                  <TableCell className="text-right">₹{formatAmount(totalDebit.toString())}</TableCell>
+                  <TableCell className="text-right">₹{formatAmount(totalCredit.toString())}</TableCell>
                 </TableRow>
               );
             })}

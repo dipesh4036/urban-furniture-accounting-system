@@ -88,7 +88,7 @@ export default function PurchaseOrdersPage() {
               <TableHead>Vendor</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total (₹)</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -102,7 +102,7 @@ export default function PurchaseOrdersPage() {
                 <TableCell>
                   <Badge variant={statusVariant(po.status)}>{po.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{poTotal(po).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{poTotal(po).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     {po.status === "DRAFT" && (

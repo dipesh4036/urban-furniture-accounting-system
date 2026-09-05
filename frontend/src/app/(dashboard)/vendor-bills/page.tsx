@@ -53,7 +53,7 @@ export default function VendorBillsPage() {
               <TableHead>Vendor</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Amount (₹)</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -66,7 +66,7 @@ export default function VendorBillsPage() {
                 <TableCell>
                   <Badge variant={statusVariant(bill.status)}>{bill.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{Number(bill.totalAmount).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{Number(bill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell className="text-right">
                   {bill.status !== "PAID" && (
                     <RecordPaymentDialog

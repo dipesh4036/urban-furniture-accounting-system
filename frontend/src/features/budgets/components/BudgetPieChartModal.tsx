@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, DollarSign, PieChart as PieChartIcon, TrendingUp, User, Tag } from "lucide-react";
+import { CheckCircle2, IndianRupee, PieChart as PieChartIcon, TrendingUp, User, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,11 +86,11 @@ export function BudgetPieChartModal({
             <div className="rounded-lg border bg-muted/30 p-3.5 flex flex-col justify-between">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Planned Total</span>
-                <DollarSign className="size-4 text-muted-foreground" />
+                <IndianRupee className="size-4 text-muted-foreground" />
               </div>
               <div className="mt-2">
                 <p className="text-lg font-bold tracking-tight text-foreground">
-                  ${planned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <span className="text-[11px] text-muted-foreground">Target Budget</span>
               </div>
@@ -103,7 +103,7 @@ export function BudgetPieChartModal({
               </div>
               <div className="mt-2">
                 <p className="text-lg font-bold tracking-tight text-sky-600 dark:text-sky-400">
-                  ${achieved.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{achieved.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <span className="text-[11px] font-semibold text-sky-600/80">
                   {achievedPct}% Realized
@@ -118,7 +118,7 @@ export function BudgetPieChartModal({
               </div>
               <div className="mt-2">
                 <p className="text-lg font-bold tracking-tight text-rose-600 dark:text-rose-400">
-                  ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <span className="text-[11px] font-semibold text-rose-600/80">
                   {balancePct}% Remaining

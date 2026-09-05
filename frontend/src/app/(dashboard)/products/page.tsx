@@ -13,7 +13,10 @@ import { ProductFormDialog } from "@/features/products/components/ProductFormDia
 import { useArchiveProduct, useProducts } from "@/features/products/hooks/useProducts";
 
 function formatPrice(value: string): string {
-  return Number(value).toFixed(2);
+  return Number(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function ProductsPage() {
@@ -83,8 +86,8 @@ export default function ProductsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Sales Price</TableHead>
-                  <TableHead>Cost</TableHead>
+                  <TableHead>Sales Price (₹)</TableHead>
+                  <TableHead>Cost (₹)</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -95,8 +98,8 @@ export default function ProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.type}</TableCell>
-                    <TableCell>${formatPrice(product.salesPrice)}</TableCell>
-                    <TableCell>${formatPrice(product.costPrice)}</TableCell>
+                    <TableCell>₹{formatPrice(product.salesPrice)}</TableCell>
+                    <TableCell>₹{formatPrice(product.costPrice)}</TableCell>
                     <TableCell>{product.category}</TableCell>
                     <TableCell>
                       <Badge variant={product.isActive ? "default" : "secondary"}>
@@ -148,11 +151,11 @@ export default function ProductsPage() {
                     <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2.5">
                       <div>
                         <p className="text-[11px] font-medium text-muted-foreground">Sales Price</p>
-                        <p className="font-semibold text-foreground">${formatPrice(product.salesPrice)}</p>
+                        <p className="font-semibold text-foreground">₹{formatPrice(product.salesPrice)}</p>
                       </div>
                       <div>
                         <p className="text-[11px] font-medium text-muted-foreground">Cost Price</p>
-                        <p className="font-semibold text-muted-foreground">${formatPrice(product.costPrice)}</p>
+                        <p className="font-semibold text-muted-foreground">₹{formatPrice(product.costPrice)}</p>
                       </div>
                     </div>
 

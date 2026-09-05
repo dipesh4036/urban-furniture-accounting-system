@@ -16,8 +16,11 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatAmount(value: string): string {
-  return Number(value).toFixed(2);
+function formatAmount(value: string | number): string {
+  return Number(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 // The backend only gives a combined totalLiabilitiesAndCapital, not one
@@ -34,24 +37,24 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
 
   const doc = await createReportDoc(
     "Balance Sheet Statement",
-    `As of ${asOf} • Accrual Accounting Basis • General Ledger Verified`,
+    `As of ${asOf} • Ind AS Accrual Accounting Basis • General Ledger Verified`,
     {
       kpiCards: [
         {
           label: "Total Assets",
-          value: `$${formatAmount(data.totalAssets)}`,
+          value: `INR ${formatAmount(data.totalAssets)}`,
           subtext: `${data.assets.length} Accounts`,
           variant: "default",
         },
         {
           label: "Liabilities",
-          value: `$${formatAmount(totalLiabilities)}`,
+          value: `INR ${formatAmount(totalLiabilities)}`,
           subtext: `${data.liabilities.length} Accounts`,
           variant: "warning",
         },
         {
           label: "Capital & Equity",
-          value: `$${formatAmount(totalCapital)}`,
+          value: `INR ${formatAmount(totalCapital)}`,
           subtext: `${data.capital.length} Accounts`,
           variant: "default",
         },
@@ -71,10 +74,10 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
   y = addReportTable(
     doc,
     y,
-    ["Asset Account", "Classification", "Account ID", "Balance (USD)"],
+    ["Asset Account", "Classification", "Account ID", "Balance (INR)"],
     [
-      ...data.assets.map((a) => [a.accountName, "Current / Fixed Asset", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.balance)}`]),
-      ["TOTAL ASSETS", "", "", `$${formatAmount(data.totalAssets)}`],
+      ...data.assets.map((a) => [a.accountName, "Current / Fixed Asset", a.accountId.slice(-8).toUpperCase(), `INR ${formatAmount(a.balance)}`]),
+      ["TOTAL ASSETS", "", "", `INR ${formatAmount(data.totalAssets)}`],
     ],
     {
       sectionTitle: "Assets Statement",
@@ -88,10 +91,10 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
   y = addReportTable(
     doc,
     y + 6,
-    ["Liability Account", "Classification", "Account ID", "Balance (USD)"],
+    ["Liability Account", "Classification", "Account ID", "Balance (INR)"],
     [
-      ...data.liabilities.map((a) => [a.accountName, "Current Liability", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.balance)}`]),
-      ["TOTAL LIABILITIES", "", "", `$${formatAmount(totalLiabilities)}`],
+      ...data.liabilities.map((a) => [a.accountName, "Current Liability", a.accountId.slice(-8).toUpperCase(), `INR ${formatAmount(a.balance)}`]),
+      ["TOTAL LIABILITIES", "", "", `INR ${formatAmount(totalLiabilities)}`],
     ],
     {
       sectionTitle: "Liabilities Statement",
@@ -105,10 +108,10 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
   y = addReportTable(
     doc,
     y + 6,
-    ["Equity Account", "Classification", "Account ID", "Balance (USD)"],
+    ["Equity Account", "Classification", "Account ID", "Balance (INR)"],
     [
-      ...data.capital.map((a) => [a.accountName, "Owner Equity / Retained", a.accountId.slice(-8).toUpperCase(), `$${formatAmount(a.balance)}`]),
-      ["TOTAL CAPITAL & EQUITY", "", "", `$${formatAmount(totalCapital)}`],
+      ...data.capital.map((a) => [a.accountName, "Owner Equity / Retained", a.accountId.slice(-8).toUpperCase(), `INR ${formatAmount(a.balance)}`]),
+      ["TOTAL CAPITAL & EQUITY", "", "", `INR ${formatAmount(totalCapital)}`],
     ],
     {
       sectionTitle: "Capital & Shareholders' Equity",
@@ -122,11 +125,11 @@ async function downloadBalanceSheetPdf(asOf: string, data: BalanceSheetReport) {
   y = addReportTable(
     doc,
     y + 6,
-    ["Verification Metric", "Standard Formula", "Calculated Total (USD)"],
+    ["Verification Metric", "Standard Formula", "Calculated Total (INR)"],
     [
-      ["Total Enterprise Assets", "Cash + AR + Inventory + Equipment", `$${formatAmount(data.totalAssets)}`],
-      ["Total Liabilities & Capital", "Total Liabilities + Total Capital", `$${formatAmount(data.totalLiabilitiesAndCapital)}`],
-      ["Accounting Equation Status", "Assets = Liabilities + Equity", isBalanced ? "EXACTLY BALANCED ($0.00 Variance)" : "Variance: Under Periodic Reconciliation"],
+      ["Total Enterprise Assets", "Cash + AR + Inventory + Equipment", `INR ${formatAmount(data.totalAssets)}`],
+      ["Total Liabilities & Capital", "Total Liabilities + Total Capital", `INR ${formatAmount(data.totalLiabilitiesAndCapital)}`],
+      ["Accounting Equation Status", "Assets = Liabilities + Equity", isBalanced ? "EXACTLY BALANCED (INR 0.00 Variance)" : "Variance: Under Periodic Reconciliation"],
     ],
     {
       sectionTitle: "General Ledger Reconciliation",
@@ -151,7 +154,7 @@ function Section({ title, accounts, total }: { title: string; accounts: BalanceS
         <TableHeader>
           <TableRow>
             <TableHead>Account</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
+            <TableHead className="text-right">Balance (₹)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -165,13 +168,13 @@ function Section({ title, accounts, total }: { title: string; accounts: BalanceS
             accounts.map((account) => (
               <TableRow key={account.accountId}>
                 <TableCell>{account.accountName}</TableCell>
-                <TableCell className="text-right">{formatAmount(account.balance)}</TableCell>
+                <TableCell className="text-right">₹{formatAmount(account.balance)}</TableCell>
               </TableRow>
             ))
           )}
           <TableRow>
             <TableCell className="font-medium">Total {title}</TableCell>
-            <TableCell className="text-right font-medium">{formatAmount(total)}</TableCell>
+            <TableCell className="text-right font-medium">₹{formatAmount(total)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -256,7 +259,7 @@ export function BalanceSheetView() {
 
             <div className="flex justify-between gap-8 self-end border-t pt-2 text-sm">
               <span className="text-muted-foreground">Total Liabilities + Capital</span>
-              <span className="font-medium">{formatAmount(data.totalLiabilitiesAndCapital)}</span>
+              <span className="font-medium">₹{formatAmount(data.totalLiabilitiesAndCapital)}</span>
             </div>
           </div>
         )}

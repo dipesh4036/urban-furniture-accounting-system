@@ -270,8 +270,8 @@ export function BudgetPieChart({
             className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg dark:bg-slate-100 dark:text-slate-900 z-30"
           >
             {hoveredSlice === "achieved"
-              ? `Achieved: $${clampedAchieved.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${achievedPct}%)`
-              : `Balance: $${Math.max(0, total - clampedAchieved).toLocaleString(undefined, { minimumFractionDigits: 2 })} (${balancePct}%)`}
+              ? `Achieved: ₹${clampedAchieved.toLocaleString("en-IN", { minimumFractionDigits: 2 })} (${achievedPct}%)`
+              : `Balance: ₹${Math.max(0, total - clampedAchieved).toLocaleString("en-IN", { minimumFractionDigits: 2 })} (${balancePct}%)`}
           </div>
         )}
       </div>
