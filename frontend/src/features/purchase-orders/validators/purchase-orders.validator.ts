@@ -16,7 +16,7 @@ export const purchaseOrderFormSchema = z.object({
 
 export type PurchaseOrderFormValues = z.infer<typeof purchaseOrderFormSchema>;
 
-export const emptyPurchaseOrderItem = { productId: "", quantity: 1, unitPrice: 0 };
+export const emptyPurchaseOrderItem = { productId: "", quantity: 1, unitPrice: "" as unknown as number };
 
 // For the "Convert to Bill" dialog - mirrors backend's
 // convertPurchaseOrderToBillSchema.

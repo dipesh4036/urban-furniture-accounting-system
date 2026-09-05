@@ -47,7 +47,7 @@ export function RecordPaymentDialog({ billId, trigger }: RecordPaymentDialogProp
     resolver: zodResolver(paymentFormSchema),
     mode: "onBlur",
     reValidateMode: "onChange",
-    defaultValues: { amount: 0, method: "" as never, date: "" },
+    defaultValues: { amount: "" as unknown as number, method: "" as never, date: "" },
   });
 
   const firstErrorField = getFirstErrorField(errors);
@@ -56,7 +56,7 @@ export function RecordPaymentDialog({ billId, trigger }: RecordPaymentDialogProp
     try {
       await payVendorBill.mutateAsync({ billId, input: values });
       toast.success("Payment recorded successfully");
-      reset({ amount: 0, method: "" as never, date: "" });
+      reset({ amount: "" as unknown as number, method: "" as never, date: "" });
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
@@ -86,9 +86,9 @@ export function RecordPaymentDialog({ billId, trigger }: RecordPaymentDialogProp
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0.00"
+                placeholder="₹1,000.00"
                 aria-invalid={firstErrorField === "amount"}
-                {...register("amount", { valueAsNumber: true })}
+                {...register("amount")}
               />
               {firstErrorField === "amount" && errors.amount && (
                 <p className="text-xs text-destructive">{errors.amount.message}</p>

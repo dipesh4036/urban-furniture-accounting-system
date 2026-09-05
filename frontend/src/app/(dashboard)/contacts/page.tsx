@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Plus } from "lucide-react";
+import { Mail, MoreVertical, Pencil, Plus, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTableToolbar } from "@/components/common/DataTableToolbar";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
@@ -16,10 +23,17 @@ import { ContactFormDialog } from "@/features/contacts/components/ContactFormDia
 import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
-import type { ContactType } from "@/features/contacts/services/contacts.service";
+import type { Contact, ContactType } from "@/features/contacts/services/contacts.service";
+
+function getContactStatus(contact: { isActive: boolean; isActivated: boolean }): string {
+  if (!contact.isActive) return "INACTIVE";
+  if (!contact.isActivated) return "ACTIVATION_PENDING";
+  return "ACTIVE";
+}
 
 export default function ContactsPage() {
   const [view, setView] = useState<ViewMode>("list");
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const {
     searchInput,
@@ -43,7 +57,7 @@ export default function ContactsPage() {
   const { data, isLoading, isError, refetch } = useContacts({
     search: search || undefined,
     type: filters.type === "ALL" ? undefined : (filters.type as ContactType),
-    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "ARCHIVED" | "PENDING_ACTIVATION"),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "INACTIVE" | "PENDING_ACTIVATION"),
     page: currentPage,
     limit: pageSize,
   });
@@ -56,10 +70,19 @@ export default function ContactsPage() {
   const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, totalItems);
 
-  async function handleArchive(id: string) {
+  async function handleDeactivate(id: string) {
     try {
       await updateContact.mutateAsync({ id, input: { isActive: false } });
-      toast.success("Contact archived");
+      toast.success("Contact set to inactive");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function handleActivate(id: string) {
+    try {
+      await updateContact.mutateAsync({ id, input: { isActive: true } });
+      toast.success("Contact set to active");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
@@ -76,6 +99,7 @@ export default function ContactsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
@@ -94,6 +118,15 @@ export default function ContactsPage() {
           />
         </div>
       </div>
+
+      {/* Controlled Edit Contact Modal */}
+      <ContactFormDialog
+        contact={editingContact ?? undefined}
+        open={!!editingContact}
+        onOpenChange={(open) => {
+          if (!open) setEditingContact(null);
+        }}
+      />
 
       {isLoading && (
         <div className="flex flex-col gap-2">
@@ -149,7 +182,7 @@ export default function ContactsPage() {
                 options: [
                   { label: "All Statuses", value: "ALL" },
                   { label: "Active", value: "ACTIVE" },
-                  { label: "Archived", value: "ARCHIVED" },
+                  { label: "Inactive", value: "INACTIVE" },
                   { label: "Activation Pending", value: "PENDING_ACTIVATION" },
                 ],
               },
@@ -167,23 +200,23 @@ export default function ContactsPage() {
           ) : (
             <>
               {view === "list" ? (
-                <div className="rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
+                <div className="w-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Contact Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="min-w-[180px]">Contact Name</TableHead>
+                        <TableHead className="w-[120px]">Type</TableHead>
+                        <TableHead className="min-w-[160px]">Email</TableHead>
+                        <TableHead className="min-w-[120px]">Location</TableHead>
+                        <TableHead className="w-[140px]">Status</TableHead>
+                        <TableHead className="w-[60px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedData.map((contact) => (
                         <TableRow key={contact.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
+                          <TableCell className="max-w-[220px]">
+                            <div className="flex items-center gap-3 min-w-0">
                               {contact.profileImage ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -196,46 +229,80 @@ export default function ContactsPage() {
                                   {contact.name.charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-semibold text-foreground">{contact.name}</span>
+                              <span className="font-semibold text-foreground truncate" title={contact.name}>
+                                {contact.name}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={contact.type} showDot={false} size="sm" />
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{contact.email}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            <span className="truncate block max-w-[200px]" title={contact.email}>
+                              {contact.email}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
-                            {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+                            <span
+                              className="truncate block max-w-[160px]"
+                              title={[contact.city, contact.state].filter(Boolean).join(", ")}
+                            >
+                              {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+                            </span>
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-wrap gap-1.5">
-                              <StatusBadge status={contact.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
-                              {!contact.isActivated && <StatusBadge status="ACTIVATION_PENDING" size="sm" />}
-                            </div>
+                            <StatusBadge status={getContactStatus(contact)} size="sm" />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {!contact.isActivated && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleResendEmail(contact.id)}
-                                  disabled={resendEmail.isPending}
-                                >
-                                  Resend Link
-                                </Button>
-                              )}
-                              <ContactFormDialog contact={contact} trigger={<Button variant="outline" size="sm">Edit</Button>} />
-                              {contact.isActive && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleArchive(contact.id)}
-                                  disabled={updateContact.isPending}
-                                >
-                                  Archive
-                                </Button>
-                              )}
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <MoreVertical className="size-4" />
+                                    <span className="sr-only">Actions</span>
+                                  </Button>
+                                }
+                              />
+                              <DropdownMenuContent align="end" className="w-44">
+                                {!contact.isActivated && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleResendEmail(contact.id)}
+                                    disabled={resendEmail.isPending}
+                                  >
+                                    <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>Resend Link</span>
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>Edit</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {contact.isActive ? (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeactivate(contact.id)}
+                                    disabled={updateContact.isPending}
+                                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                  >
+                                    <UserX className="size-3.5 mr-2" />
+                                    <span>Deactivate</span>
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => handleActivate(contact.id)}
+                                    disabled={updateContact.isPending}
+                                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                  >
+                                    <UserCheck className="size-3.5 mr-2" />
+                                    <span>Activate</span>
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -259,68 +326,96 @@ export default function ContactsPage() {
                     {paginatedData.map((contact) => (
                       <Card key={contact.id} className="flex flex-col justify-between transition-all hover:shadow-md">
                         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
                             {contact.profileImage ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={toFileUrl(contact.profileImage)}
                                 alt={contact.name}
-                                className="size-10 rounded-full object-cover"
+                                className="size-10 rounded-full object-cover shrink-0"
                               />
                             ) : (
-                              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
                                 {contact.name.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <div>
-                              <h3 className="font-semibold text-foreground line-clamp-1">{contact.name}</h3>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-foreground truncate" title={contact.name}>
+                                {contact.name}
+                              </h3>
                               <StatusBadge status={contact.type} showDot={false} size="sm" className="mt-1" />
                             </div>
                           </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                >
+                                  <MoreVertical className="size-4" />
+                                  <span className="sr-only">Actions</span>
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent align="end" className="w-44">
+                              {!contact.isActivated && (
+                                <DropdownMenuItem
+                                  onClick={() => handleResendEmail(contact.id)}
+                                  disabled={resendEmail.isPending}
+                                >
+                                  <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                                  <span>Resend Link</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {contact.isActive ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleDeactivate(contact.id)}
+                                  disabled={updateContact.isPending}
+                                  className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                >
+                                  <UserX className="size-3.5 mr-2" />
+                                  <span>Deactivate</span>
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => handleActivate(contact.id)}
+                                  disabled={updateContact.isPending}
+                                  className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                >
+                                  <UserCheck className="size-3.5 mr-2" />
+                                  <span>Activate</span>
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </CardHeader>
-                        <CardContent className="space-y-3 pb-3 text-sm">
+                        <CardContent className="space-y-3 pb-4 text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Mail className="size-3.5 shrink-0" />
-                            <span className="truncate text-xs">{contact.email}</span>
+                            <span className="truncate text-xs" title={contact.email}>
+                              {contact.email}
+                            </span>
                           </div>
 
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            <StatusBadge status={contact.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
-                            {!contact.isActivated && <StatusBadge status="ACTIVATION_PENDING" size="sm" />}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Location:</span>
+                            <span className="font-medium text-foreground truncate max-w-[150px]">
+                              {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+                            </span>
+                          </div>
+
+                          <div className="pt-1">
+                            <StatusBadge status={getContactStatus(contact)} size="sm" />
                           </div>
                         </CardContent>
-                        <CardFooter className="flex flex-wrap justify-end gap-2 border-t pt-3">
-                          {!contact.isActivated && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs"
-                              onClick={() => handleResendEmail(contact.id)}
-                              disabled={resendEmail.isPending}
-                            >
-                              Resend Link
-                            </Button>
-                          )}
-                          <ContactFormDialog
-                            contact={contact}
-                            trigger={
-                              <Button variant="outline" size="sm" className="h-8 text-xs">
-                                Edit
-                              </Button>
-                            }
-                          />
-                          {contact.isActive && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs"
-                              onClick={() => handleArchive(contact.id)}
-                              disabled={updateContact.isPending}
-                            >
-                              Archive
-                            </Button>
-                          )}
-                        </CardFooter>
                       </Card>
                     ))}
                   </div>

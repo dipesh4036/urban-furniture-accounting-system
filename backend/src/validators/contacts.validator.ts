@@ -49,7 +49,7 @@ export type UpdateContactInput = z.infer<typeof updateContactSchema>;
 export const listContactsQuerySchema = z.object({
   type: contactTypeSchema.optional(),
   search: z.string().optional(),
-  status: z.enum(["ACTIVE", "ARCHIVED", "PENDING_ACTIVATION"]).optional(),
+  status: z.enum(["ACTIVE", "ARCHIVED", "INACTIVE", "PENDING_ACTIVATION"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

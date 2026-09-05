@@ -36,7 +36,7 @@ interface BudgetFormDialogProps {
 const emptyBudget: BudgetFormValues = {
   name: "",
   period: "",
-  plannedAmount: 0,
+  plannedAmount: "" as unknown as number,
   analyticAccountId: "",
   responsiblePersonId: "",
 };
@@ -160,9 +160,9 @@ export function BudgetFormDialog({ trigger, open: controlledOpen, onOpenChange: 
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0.00"
+                placeholder="₹5,000.00"
                 aria-invalid={firstErrorField === "plannedAmount"}
-                {...register("plannedAmount", { valueAsNumber: true })}
+                {...register("plannedAmount")}
               />
               {firstErrorField === "plannedAmount" && errors.plannedAmount && (
                 <p className="text-xs text-destructive">{errors.plannedAmount.message}</p>
