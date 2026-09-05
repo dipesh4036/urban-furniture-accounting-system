@@ -153,6 +153,9 @@ async function main() {
         if (e.code !== "P2002") throw e;
       }
     }
+    if (analyticAccountsCreated.length === 0) {
+      analyticAccountsCreated = await (prisma as any).analyticAccount.findMany();
+    }
     console.log(`  ✓ Created/Verified ${analyticAccountsCreated.length} analytic accounts`);
   } catch (e) {
     console.log(`  ⚠ Skipped analytic accounts (model may not be available yet)`);
@@ -162,25 +165,42 @@ async function main() {
   try {
     console.log("\n💵 Seeding budgets...");
     if (analyticAccountsCreated.length > 0) {
-      const budgets = [
-        { name: "Marketing Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("50000.00"), analyticAccountId: analyticAccountsCreated[0].id, responsiblePersonId: users[1].id },
-        { name: "Operations Q1 2026", period: "2026-Q1", plannedAmount: new Prisma.Decimal("75000.00"), analyticAccountId: analyticAccountsCreated[Math.min(2, analyticAccountsCreated.length - 1)].id, responsiblePersonId: users[2].id },
-        { name: "Product A Sales Target", period: "2026-Q1", plannedAmount: new Prisma.Decimal("200000.00"), analyticAccountId: analyticAccountsCreated[Math.min(3, analyticAccountsCreated.length - 1)].id, responsiblePersonId: users[1].id },
+      const budgetTemplates = [
+        { name: "Marketing Budget", plannedAmount: "50000.00", analyticIndex: 0, userIndex: 1 },
+        { name: "Operations Budget", plannedAmount: "75000.00", analyticIndex: 2, userIndex: 2 },
+        { name: "Sales Target", plannedAmount: "200000.00", analyticIndex: 1, userIndex: 1 },
+        { name: "Product Development", plannedAmount: "120000.00", analyticIndex: 3, userIndex: 0 },
       ];
 
-      for (const budget of budgets) {
-        try {
-          await (prisma as any).budget.create({ data: budget });
-        } catch (e: any) {
-          if (e.code !== "P2002") throw e;
+      const quarters = ["2026-Q1", "2026-Q2", "2026-Q3", "2026-Q4"];
+      let seededBudgetsCount = 0;
+
+      for (const q of quarters) {
+        for (const t of budgetTemplates) {
+          const budgetData = {
+            name: `${t.name} ${q}`,
+            period: q,
+            plannedAmount: new Prisma.Decimal(t.plannedAmount),
+            analyticAccountId: analyticAccountsCreated[Math.min(t.analyticIndex, analyticAccountsCreated.length - 1)].id,
+            responsiblePersonId: (users[t.userIndex] || users[0]).id,
+          };
+
+          const existing = await (prisma as any).budget.findFirst({
+            where: { name: budgetData.name, period: budgetData.period },
+          });
+
+          if (!existing) {
+            await (prisma as any).budget.create({ data: budgetData });
+            seededBudgetsCount++;
+          }
         }
       }
-      console.log(`  ✓ Created budgets`);
+      console.log(`  ✓ Created/Verified ${quarters.length * budgetTemplates.length} budgets (${seededBudgetsCount} newly created)`);
     } else {
-      console.log(`  ⚠ Skipped budgets (no analytic accounts created)`);
+      console.log(`  ⚠ Skipped budgets (no analytic accounts available)`);
     }
   } catch (e) {
-    console.log(`  ⚠ Skipped budgets (model may not be available yet)`);
+    console.log(`  ⚠ Skipped budgets:`, e);
   }
 
   // 8. SEED PURCHASE ORDERS & VENDOR BILLS
@@ -282,6 +302,145 @@ async function main() {
   });
 
   console.log(`  ✓ Created 2 payments`);
+
+  // 11. SEED JOURNAL ENTRIES & ITEMS (for Financial Reports: Balance Sheet & Profit & Loss)
+  console.log("\n📝 Seeding journal entries for accounting reports...");
+
+  const allAccountsForJE = await prisma.account.findMany();
+  const accMap = new Map(allAccountsForJE.map((a) => [a.name, a.id]));
+
+  const allJournalsForJE = await prisma.journal.findMany();
+  const jrMap = new Map(allJournalsForJE.map((j) => [j.name, j.id]));
+  const bankJrId = jrMap.get("Bank Journal") || allJournalsForJE[0].id;
+  const salesJrId = jrMap.get("Sales Journal") || allJournalsForJE[0].id;
+  const purchaseJrId = jrMap.get("Purchase Journal") || allJournalsForJE[0].id;
+
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth();
+  const currentDay = Math.max(1, Math.min(now.getDate(), 28));
+  const currentMonthDate1 = new Date(curYear, curMonth, Math.max(1, Math.min(2, currentDay)));
+  const currentMonthDate2 = new Date(curYear, curMonth, Math.max(1, Math.min(3, currentDay)));
+  const currentMonthDate3 = new Date(curYear, curMonth, Math.max(1, Math.min(4, currentDay)));
+  const currentMonthDate4 = new Date(curYear, curMonth, currentDay);
+
+  const journalEntriesToSeed = [
+    // 1. Opening Balance - Perfectly balances Assets = Liabilities + Capital
+    {
+      reference: "JE-OPENING-2026",
+      journalId: bankJrId,
+      date: new Date("2026-01-01"),
+      items: [
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("100000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Cash")!, debit: new Prisma.Decimal("25000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Inventory")!, debit: new Prisma.Decimal("50000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Furniture & Fixtures")!, debit: new Prisma.Decimal("40000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Accounts Payable")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("25000.00") },
+        { accountId: accMap.get("Short-term Loan")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("40000.00") },
+        { accountId: accMap.get("Opening Balance")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("150000.00") },
+      ],
+    },
+    // 2. Q1 Operations - Sales
+    {
+      reference: "JE-OPS-Q1-SALES",
+      journalId: salesJrId,
+      date: new Date("2026-03-15"),
+      items: [
+        { accountId: accMap.get("Accounts Receivable")!, debit: new Prisma.Decimal("35000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Sales Revenue")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("30000.00") },
+        { accountId: accMap.get("Service Revenue")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("5000.00") },
+      ],
+    },
+    // 3. Q1 Operations - Payment Collection
+    {
+      reference: "JE-OPS-Q1-PAYMENT",
+      journalId: bankJrId,
+      date: new Date("2026-03-25"),
+      items: [
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("30000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Accounts Receivable")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("30000.00") },
+      ],
+    },
+    // 4. Q1 Operations - Expenses
+    {
+      reference: "JE-OPS-Q1-EXPENSES",
+      journalId: bankJrId,
+      date: new Date("2026-03-28"),
+      items: [
+        { accountId: accMap.get("Rent Expense")!, debit: new Prisma.Decimal("9000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Salary Expense")!, debit: new Prisma.Decimal("15000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Utilities Expense")!, debit: new Prisma.Decimal("2500.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("26500.00") },
+      ],
+    },
+    // 5. Current Month - Sales Revenue (shows in P&L current month default)
+    {
+      reference: "JE-CURRENT-MONTH-SALES",
+      journalId: salesJrId,
+      date: currentMonthDate1,
+      items: [
+        { accountId: accMap.get("Accounts Receivable")!, debit: new Prisma.Decimal("45000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Sales Revenue")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("38000.00") },
+        { accountId: accMap.get("Service Revenue")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("7000.00") },
+      ],
+    },
+    // 6. Current Month - Purchases
+    {
+      reference: "JE-CURRENT-MONTH-PURCHASES",
+      journalId: purchaseJrId,
+      date: currentMonthDate2,
+      items: [
+        { accountId: accMap.get("Purchase Expense")!, debit: new Prisma.Decimal("16500.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Accounts Payable")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("16500.00") },
+      ],
+    },
+    // 7. Current Month - Operating Expenses (Rent, Salary, Utilities)
+    {
+      reference: "JE-CURRENT-MONTH-EXPENSES",
+      journalId: bankJrId,
+      date: currentMonthDate3,
+      items: [
+        { accountId: accMap.get("Rent Expense")!, debit: new Prisma.Decimal("6000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Salary Expense")!, debit: new Prisma.Decimal("12500.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Utilities Expense")!, debit: new Prisma.Decimal("1800.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("20300.00") },
+      ],
+    },
+    // 8. Current Month - Collections & Settlements
+    {
+      reference: "JE-CURRENT-MONTH-SETTLEMENTS",
+      journalId: bankJrId,
+      date: currentMonthDate4,
+      items: [
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("25000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Accounts Payable")!, debit: new Prisma.Decimal("10000.00"), credit: new Prisma.Decimal("0.00") },
+        { accountId: accMap.get("Accounts Receivable")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("25000.00") },
+        { accountId: accMap.get("Bank Account")!, debit: new Prisma.Decimal("0.00"), credit: new Prisma.Decimal("10000.00") },
+      ],
+    },
+  ];
+
+  let seededJEsCount = 0;
+  for (const je of journalEntriesToSeed) {
+    const existing = await prisma.journalEntry.findFirst({
+      where: { reference: je.reference },
+    });
+
+    if (!existing) {
+      await prisma.journalEntry.create({
+        data: {
+          journalId: je.journalId,
+          date: je.date,
+          reference: je.reference,
+          items: {
+            create: je.items,
+          },
+        },
+      });
+      seededJEsCount++;
+    }
+  }
+  console.log(`  ✓ Created/Verified ${journalEntriesToSeed.length} journal entries (${seededJEsCount} newly created)`);
 
   console.log("\n✅ Seed completed successfully!");
 }
