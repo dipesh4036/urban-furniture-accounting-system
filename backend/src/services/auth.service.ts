@@ -1,8 +1,12 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/db";
 import { env } from "../config/env";
+import { sendPasswordResetEmail } from "./email.service";
 import { AppError } from "../utils/AppError";
+
+const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
 const BCRYPT_COST = 10;
 const ACCESS_TOKEN_EXPIRY = "15m";
@@ -100,4 +104,93 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
     email: user.email,
     role: user.role,
   };
+}
+
+// If a User exists with this email, generate a reset token and email
+// it to them. If no User exists with this email, do nothing - but
+// don't tell the caller that. Otherwise an attacker could use this
+// endpoint to check which emails have accounts.
+export async function forgotPassword(email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.isActive) {
+    return;
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetTokenExpiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRY_MS);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { resetToken, resetTokenExpiresAt },
+  });
+
+  await sendPasswordResetEmail({ email: user.email, name: user.name, resetToken });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { resetToken: token, resetTokenExpiresAt: { gt: new Date() } },
+  });
+
+  if (!user) {
+    throw new AppError(400, "This reset link is invalid or has expired", "INVALID_RESET_TOKEN");
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, resetToken: null, resetTokenExpiresAt: null },
+  });
+}
+
+// Which kind of account a token belongs to. Right now only "USER" is
+// ever actually returned - see the TODO in activateAccount below.
+type TokenAudience = "USER" | "CONTACT";
+
+// One shared "set your password from a token" endpoint, meant to serve
+// both audiences:
+// - USER (staff): not really needed per plan.md, since an Admin sets
+//   the password directly on Create User - but built out here anyway so
+//   the shared token flow has a working reference implementation.
+// - CONTACT: a Contact activates their account this way after an
+//   Admin/Accountant creates them in Contact Master. NOT WIRED UP YET -
+//   the Contact model doesn't exist until the feat/contact-master branch.
+export async function activateAccount(token: string, newPassword: string): Promise<void> {
+  const audience = await resolveTokenAudience(token);
+
+  if (audience === "USER") {
+    const user = await prisma.user.findFirst({
+      where: { resetToken: token, resetTokenExpiresAt: { gt: new Date() } },
+    });
+
+    if (!user) {
+      throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetToken: null, resetTokenExpiresAt: null },
+    });
+    return;
+  }
+
+  // TODO(feat/contact-master): this branch is currently unreachable -
+  // resolveTokenAudience() has no way to return "CONTACT" yet. Once the
+  // Contact model exists, look up the Contact by activationToken here,
+  // check activationTokenExpiresAt, then set Contact.passwordHash,
+  // isActivated = true, and clear activationToken/activationTokenExpiresAt.
+  throw new AppError(400, "This activation link is invalid or has expired", "INVALID_ACTIVATION_TOKEN");
+}
+
+async function resolveTokenAudience(token: string): Promise<TokenAudience> {
+  const user = await prisma.user.findFirst({ where: { resetToken: token } });
+  if (user) {
+    return "USER";
+  }
+
+  // TODO(feat/contact-master): once Contact exists, check
+  // Contact.activationToken here and return "CONTACT" if it matches.
+  return "USER";
 }

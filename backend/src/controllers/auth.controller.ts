@@ -50,3 +50,41 @@ export const meController = asyncHandler(async (req: Request, res: Response) => 
     timestamp: new Date().toISOString(),
   });
 });
+
+export const forgotPasswordController = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+  await authService.forgotPassword(email);
+
+  // Same response whether or not the email exists - see the comment in
+  // authService.forgotPassword for why.
+  res.status(200).json({
+    success: true,
+    message: "If that email has an account, a reset link has been sent",
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export const resetPasswordController = asyncHandler(async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body;
+  await authService.resetPassword(token, newPassword);
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successfully",
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export const activateAccountController = asyncHandler(async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body;
+  await authService.activateAccount(token, newPassword);
+
+  res.status(200).json({
+    success: true,
+    message: "Account activated successfully",
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+});
