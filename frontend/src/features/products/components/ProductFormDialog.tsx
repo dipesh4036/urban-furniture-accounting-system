@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadFile } from "@/features/uploads/services/uploads.service";
 import { toFileUrl } from "@/lib/api";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateProduct, useUpdateProduct } from "../hooks/useProducts";
 import type { Product, ProductType } from "../services/products.service";
 import { productFormSchema, productTypes, type ProductFormValues } from "../validators/products.validator";
@@ -81,10 +82,13 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
     formState: { errors },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: valuesFromProduct(product),
   });
 
   const productImage = useWatch({ control, name: "image" });
+  const firstErrorField = getFirstErrorField(errors);
 
   // Reset the form back to this product's values (or blank, for create)
   // every time the dialog opens - otherwise a previously edited product's
@@ -219,10 +223,12 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
               <Input
                 id="name"
                 placeholder="e.g. Ergonomic Office Chair"
-                aria-invalid={!!errors.name}
+                aria-invalid={firstErrorField === "name"}
                 {...register("name")}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {firstErrorField === "name" && errors.name && (
+                <p className="text-xs text-destructive">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -235,7 +241,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                 name="type"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={firstErrorField === "type"}>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -248,7 +254,9 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                   </Select>
                 )}
               />
-              {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+              {firstErrorField === "type" && errors.type && (
+                <p className="text-xs text-destructive">{errors.type.message}</p>
+              )}
             </div>
           </div>
 
@@ -260,10 +268,12 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
             <Input
               id="category"
               placeholder="e.g. Seating, Desks, Storage, Lighting"
-              aria-invalid={!!errors.category}
+              aria-invalid={firstErrorField === "category"}
               {...register("category")}
             />
-            {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+            {firstErrorField === "category" && errors.category && (
+              <p className="text-xs text-destructive">{errors.category.message}</p>
+            )}
           </div>
 
           {/* Pricing & Valuation Section */}
@@ -286,10 +296,12 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                   step="0.01"
                   min="0"
                   placeholder="0.00"
-                  aria-invalid={!!errors.salesPrice}
+                  aria-invalid={firstErrorField === "salesPrice"}
                   {...register("salesPrice")}
                 />
-                {errors.salesPrice && <p className="text-xs text-destructive">{errors.salesPrice.message}</p>}
+                {firstErrorField === "salesPrice" && errors.salesPrice && (
+                  <p className="text-xs text-destructive">{errors.salesPrice.message}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -303,10 +315,12 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                   step="0.01"
                   min="0"
                   placeholder="0.00"
-                  aria-invalid={!!errors.costPrice}
+                  aria-invalid={firstErrorField === "costPrice"}
                   {...register("costPrice")}
                 />
-                {errors.costPrice && <p className="text-xs text-destructive">{errors.costPrice.message}</p>}
+                {firstErrorField === "costPrice" && errors.costPrice && (
+                  <p className="text-xs text-destructive">{errors.costPrice.message}</p>
+                )}
               </div>
             </div>
           </div>

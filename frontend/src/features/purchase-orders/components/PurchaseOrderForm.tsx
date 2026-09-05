@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreatePurchaseOrder } from "../hooks/usePurchaseOrders";
 import {
   emptyPurchaseOrderItem,
@@ -41,6 +42,8 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
     formState: { errors },
   } = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       vendorId: "",
       date: "",
@@ -49,6 +52,21 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const firstErrorField = getFirstErrorField(errors);
+
+  let firstItemIndex: number | undefined;
+  let firstItemField: string | undefined;
+  if (firstErrorField === "items" && Array.isArray(errors.items)) {
+    for (let i = 0; i < errors.items.length; i++) {
+      const rowError = errors.items[i];
+      if (rowError) {
+        firstItemIndex = i;
+        firstItemField = Object.keys(rowError)[0];
+        break;
+      }
+    }
+  }
 
   // Watches every line's quantity/unitPrice as the user types, so the
   // total footer updates live - not just when the form is submitted.

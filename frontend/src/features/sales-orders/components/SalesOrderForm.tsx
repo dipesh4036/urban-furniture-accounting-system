@@ -41,6 +41,8 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
     formState: { errors },
   } = useForm<SalesOrderFormValues>({
     resolver: zodResolver(salesOrderFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       customerId: "",
       date: "",

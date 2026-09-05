@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { cn } from "@/lib/utils";
 import { useCreateUser } from "../hooks/useUsers";
 import { createUserFormSchema, staffRoles, type CreateUserFormValues } from "../validators/users.validator";
@@ -36,6 +37,8 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
     formState: { errors },
   } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       loginId: "",
@@ -45,6 +48,8 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
       role: "" as CreateUserFormValues["role"],
     },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: CreateUserFormValues) {
     try {
@@ -84,10 +89,12 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
             id="name"
             placeholder="e.g. Sarah Connor"
             autoComplete="off"
-            aria-invalid={!!errors.name}
+            aria-invalid={firstErrorField === "name"}
             {...register("name")}
           />
-          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          {firstErrorField === "name" && errors.name && (
+            <p className="text-xs text-destructive">{errors.name.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -99,10 +106,12 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
             id="loginId"
             placeholder="e.g. sconnor"
             autoComplete="off"
-            aria-invalid={!!errors.loginId}
+            aria-invalid={firstErrorField === "loginId"}
             {...register("loginId")}
           />
-          {errors.loginId && <p className="text-xs text-destructive">{errors.loginId.message}</p>}
+          {firstErrorField === "loginId" && errors.loginId && (
+            <p className="text-xs text-destructive">{errors.loginId.message}</p>
+          )}
         </div>
       </div>
 
@@ -117,10 +126,12 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
             type="email"
             placeholder="sconnor@company.com"
             autoComplete="off"
-            aria-invalid={!!errors.email}
+            aria-invalid={firstErrorField === "email"}
             {...register("email")}
           />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+          {firstErrorField === "email" && errors.email && (
+            <p className="text-xs text-destructive">{errors.email.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -146,7 +157,9 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
               </RadioGroup>
             )}
           />
-          {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
+          {firstErrorField === "role" && errors.role && (
+            <p className="text-xs text-destructive">{errors.role.message}</p>
+          )}
         </div>
       </div>
 
@@ -169,10 +182,12 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
               type="password"
               placeholder="••••••••"
               autoComplete="new-password"
-              aria-invalid={!!errors.password}
+              aria-invalid={firstErrorField === "password"}
               {...register("password")}
             />
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            {firstErrorField === "password" && errors.password && (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -185,10 +200,10 @@ export function CreateUserForm({ onSuccess, onCancel, inDialog = false }: Create
               type="password"
               placeholder="••••••••"
               autoComplete="new-password"
-              aria-invalid={!!errors.confirmPassword}
+              aria-invalid={firstErrorField === "confirmPassword"}
               {...register("confirmPassword")}
             />
-            {errors.confirmPassword && (
+            {firstErrorField === "confirmPassword" && errors.confirmPassword && (
               <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
             )}
           </div>

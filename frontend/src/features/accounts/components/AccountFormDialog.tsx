@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateAccount, useUpdateAccount } from "../hooks/useAccounts";
 import type { Account, AccountType } from "../services/accounts.service";
 import { accountFormSchema, accountTypes, type AccountFormValues } from "../validators/accounts.validator";
@@ -56,6 +57,8 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
     formState: { errors },
   } = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     // The Select must start with a defined value (empty string, not
     // undefined) or base-ui logs a "switching from uncontrolled to
     // controlled" warning the moment a real type gets picked. "" isn't a
@@ -63,6 +66,8 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
     // the user actually picks one - it's just a placeholder starting value.
     defaultValues: { name: account?.name ?? "", type: account?.type ?? ("" as AccountType) },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   // Reset the form back to this account's values (or blank, for create)
   // every time the dialog opens - otherwise a previously edited account's
@@ -112,10 +117,12 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
             <Input
               id="name"
               placeholder="e.g. Cash in Hand, Inventory, Sales Revenue"
-              aria-invalid={!!errors.name}
+              aria-invalid={firstErrorField === "name"}
               {...register("name")}
             />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            {firstErrorField === "name" && errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -128,7 +135,7 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
               name="type"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                  <SelectTrigger id="type" className="w-full" aria-invalid={firstErrorField === "type"}>
                     <SelectValue placeholder="Select account classification" />
                   </SelectTrigger>
                   <SelectContent>
@@ -141,7 +148,9 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
                 </Select>
               )}
             />
-            {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+            {firstErrorField === "type" && errors.type && (
+              <p className="text-xs text-destructive">{errors.type.message}</p>
+            )}
           </div>
 
           <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">
