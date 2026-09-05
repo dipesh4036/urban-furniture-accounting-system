@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { forgotPassword } from "@/features/auth/services/auth.service";
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/features/auth/validators/auth.validator";
 
@@ -71,6 +72,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="h-10 mt-2">
+          {isSubmitting && <Spinner />}
           {isSubmitting ? "Sending..." : "Send reset link"}
         </Button>
 
