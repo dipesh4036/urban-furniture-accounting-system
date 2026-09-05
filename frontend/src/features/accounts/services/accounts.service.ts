@@ -14,9 +14,10 @@ export interface Account {
 
 // List endpoints are paginated by default (backend-express SKILL.md), so
 // the list response is the page of accounts plus paging info - not just
-// a bare array.
+// a bare array. Field is `accounts`, not `items` - matches
+// backend/src/controllers/accounts.controller.ts's `data: { accounts, meta }`.
 export interface AccountListResult {
-  items: Account[];
+  accounts: Account[];
   meta: {
     page: number;
     limit: number;
@@ -49,13 +50,15 @@ export function listAccounts(params?: ListAccountsParams): Promise<AccountListRe
   return api.get("/accounts", { params });
 }
 
-// Calls POST /accounts.
-export function createAccount(input: CreateAccountInput): Promise<Account> {
+// Calls POST /accounts. Backend replies with `data: { account }`, not the
+// bare account - see accounts.controller.ts's createAccountController.
+export function createAccount(input: CreateAccountInput): Promise<{ account: Account }> {
   return api.post("/accounts", input);
 }
 
 // Calls PATCH /accounts/:id. Used for both editing fields and archiving
-// (archiving is just sending { isActive: false }).
-export function updateAccount(id: string, input: UpdateAccountInput): Promise<Account> {
+// (archiving is just sending { isActive: false }). Same `{ account }`
+// wrapping as create.
+export function updateAccount(id: string, input: UpdateAccountInput): Promise<{ account: Account }> {
   return api.patch(`/accounts/${id}`, input);
 }
