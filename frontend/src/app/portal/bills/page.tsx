@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useVendorBills } from "@/features/vendor-bills/hooks/useVendorBills";
 import type { VendorBill, DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
+import { PortalPayDialog } from "@/features/portal/components/PortalPayDialog";
 
 function statusBadge(status: DocStatus) {
   switch (status) {
@@ -137,15 +138,25 @@ export default function PortalBillsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedBill(bill)}
-                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          <Eye className="size-3.5" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedBill(bill)}
+                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Eye className="size-3.5" />
+                            View
+                          </Button>
+                          {bill.status !== "PAID" && (
+                            <PortalPayDialog
+                              type="bill"
+                              id={bill.id}
+                              referenceNumber={bill.billNumber}
+                              balanceDue={balanceDue}
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -163,10 +174,21 @@ export default function PortalBillsPage() {
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between gap-4">
-                  <DialogTitle className="text-xl font-bold">
-                    Vendor Bill {selectedBill.billNumber}
-                  </DialogTitle>
-                  {statusBadge(selectedBill.status)}
+                  <div className="flex items-center gap-2">
+                    <DialogTitle className="text-xl font-bold">
+                      Vendor Bill {selectedBill.billNumber}
+                    </DialogTitle>
+                    {statusBadge(selectedBill.status)}
+                  </div>
+                  {selectedBill.status !== "PAID" && (
+                    <PortalPayDialog
+                      type="bill"
+                      id={selectedBill.id}
+                      referenceNumber={selectedBill.billNumber}
+                      balanceDue={Math.max(0, Number(selectedBill.totalAmount) - calculatePaidAmount(selectedBill))}
+                      onSuccess={() => setSelectedBill(null)}
+                    />
+                  )}
                 </div>
                 <DialogDescription>
                   Detailed breakdown of this vendor bill.

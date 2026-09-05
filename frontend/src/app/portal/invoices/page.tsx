@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useCustomerInvoices } from "@/features/customer-invoices/hooks/useCustomerInvoices";
 import type { CustomerInvoice, DocStatus } from "@/features/customer-invoices/services/customer-invoices.service";
+import { PortalPayDialog } from "@/features/portal/components/PortalPayDialog";
 
 function statusBadge(status: DocStatus) {
   switch (status) {
@@ -137,15 +138,25 @@ export default function PortalInvoicesPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedInvoice(invoice)}
-                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          <Eye className="size-3.5" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedInvoice(invoice)}
+                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Eye className="size-3.5" />
+                            View
+                          </Button>
+                          {invoice.status !== "PAID" && (
+                            <PortalPayDialog
+                              type="invoice"
+                              id={invoice.id}
+                              referenceNumber={invoice.invoiceNumber}
+                              balanceDue={balanceDue}
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -163,10 +174,21 @@ export default function PortalInvoicesPage() {
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between gap-4">
-                  <DialogTitle className="text-xl font-bold">
-                    Invoice {selectedInvoice.invoiceNumber}
-                  </DialogTitle>
-                  {statusBadge(selectedInvoice.status)}
+                  <div className="flex items-center gap-2">
+                    <DialogTitle className="text-xl font-bold">
+                      Invoice {selectedInvoice.invoiceNumber}
+                    </DialogTitle>
+                    {statusBadge(selectedInvoice.status)}
+                  </div>
+                  {selectedInvoice.status !== "PAID" && (
+                    <PortalPayDialog
+                      type="invoice"
+                      id={selectedInvoice.id}
+                      referenceNumber={selectedInvoice.invoiceNumber}
+                      balanceDue={Math.max(0, Number(selectedInvoice.totalAmount) - calculatePaidAmount(selectedInvoice))}
+                      onSuccess={() => setSelectedInvoice(null)}
+                    />
+                  )}
                 </div>
                 <DialogDescription>
                   Detailed breakdown of this customer invoice.
