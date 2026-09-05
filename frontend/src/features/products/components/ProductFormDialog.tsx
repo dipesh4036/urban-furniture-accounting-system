@@ -35,8 +35,8 @@ const productTypeLabels: Record<ProductType, string> = {
 const emptyValues: ProductFormValues = {
   name: "",
   type: "" as ProductType,
-  salesPrice: 0,
-  costPrice: 0,
+  salesPrice: "" as unknown as number,
+  costPrice: "" as unknown as number,
   category: "",
   image: undefined,
 };
@@ -285,7 +285,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="₹500.00"
                   aria-invalid={!!errors.salesPrice}
                   {...register("salesPrice")}
                 />
@@ -302,7 +302,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="₹300.00"
                   aria-invalid={!!errors.costPrice}
                   {...register("costPrice")}
                 />

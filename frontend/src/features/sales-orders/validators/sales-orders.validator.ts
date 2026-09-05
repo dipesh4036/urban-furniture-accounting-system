@@ -17,7 +17,7 @@ export const salesOrderFormSchema = z.object({
 
 export type SalesOrderFormValues = z.infer<typeof salesOrderFormSchema>;
 
-export const emptySalesOrderItem = { productId: "", quantity: 1, unitPrice: 0, tax: 0 };
+export const emptySalesOrderItem = { productId: "", quantity: 1, unitPrice: "" as unknown as number, tax: "" as unknown as number };
 
 // For the "Generate Invoice" dialog - mirrors backend's
 // generateInvoiceFromSalesOrderSchema.

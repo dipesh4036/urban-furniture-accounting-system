@@ -29,4 +29,4 @@ export const journalEntryFormSchema = z
 
 export type JournalEntryFormValues = z.infer<typeof journalEntryFormSchema>;
 
-export const emptyJournalItem = { accountId: "", debit: 0, credit: 0 };
+export const emptyJournalItem = { accountId: "", debit: "" as unknown as number, credit: "" as unknown as number };

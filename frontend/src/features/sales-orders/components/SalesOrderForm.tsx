@@ -158,18 +158,18 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="₹500.00"
                   aria-invalid={!!errors.items?.[index]?.unitPrice}
-                  {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+                  {...register(`items.${index}.unitPrice`)}
                 />
 
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="₹50.00"
                   aria-invalid={!!errors.items?.[index]?.tax}
-                  {...register(`items.${index}.tax`, { valueAsNumber: true })}
+                  {...register(`items.${index}.tax`)}
                 />
 
                 <Button
