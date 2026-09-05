@@ -5,6 +5,7 @@ import { contactsRouter } from "./contacts.routes";
 import { journalEntriesRouter } from "./journal-entries.routes";
 import { journalsRouter } from "./journals.routes";
 import { productsRouter } from "./products.routes";
+import { purchaseOrdersRouter } from "./purchase-orders.routes";
 import { uploadsRouter } from "./uploads.routes";
 import { usersRouter } from "./users.routes";
 
@@ -20,3 +21,4 @@ apiRouter.use("/products", productsRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/journals", journalsRouter);
 apiRouter.use("/journal-entries", journalEntriesRouter);
+apiRouter.use("/purchase-orders", purchaseOrdersRouter);
