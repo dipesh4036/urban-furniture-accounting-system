@@ -11,6 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -74,50 +75,60 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
       }}
     >
       <DialogTrigger render={trigger} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New journal</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Journal</DialogTitle>
+          <DialogDescription>
+            Configure a specialized sales, purchase, bank, or cash transaction journal.
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">
-              Name
-              <RequiredMark />
-            </Label>
-            <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-2 flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="name">
+                Journal Name
+                <RequiredMark />
+              </Label>
+              <Input
+                id="name"
+                placeholder="e.g. Customer Invoices, Main Bank"
+                aria-invalid={!!errors.name}
+                {...register("name")}
+              />
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="type">
+                Journal Type
+                <RequiredMark />
+              </Label>
+              <Controller
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {journalTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {journalTypeLabels[type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="type">
-              Type
-              <RequiredMark />
-            </Label>
-            <Controller
-              control={control}
-              name="type"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {journalTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {journalTypeLabels[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="defaultAccountId">
-              Default Account
+              Default Chart Account
               <RequiredMark />
             </Label>
             <Controller
@@ -126,14 +137,22 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
               render={({ field }) => <AccountCombobox value={field.value} onChange={field.onChange} />}
             />
             {errors.defaultAccountId && (
-              <p className="text-sm text-destructive">{errors.defaultAccountId.message}</p>
+              <p className="text-xs text-destructive">{errors.defaultAccountId.message}</p>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createJournal.isPending}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={createJournal.isPending}>
-              {createJournal.isPending && <Spinner />}
-              {createJournal.isPending ? "Saving..." : "Save"}
+              {createJournal.isPending && <Spinner className="mr-2 size-4" />}
+              {createJournal.isPending ? "Saving..." : "Create Journal"}
             </Button>
           </DialogFooter>
         </form>

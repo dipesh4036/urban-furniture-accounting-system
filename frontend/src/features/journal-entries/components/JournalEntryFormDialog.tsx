@@ -21,14 +21,18 @@ export function JournalEntryFormDialog({ trigger }: JournalEntryFormDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Journal Entry</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Journal Entry</DialogTitle>
           <DialogDescription>
-            Record balanced double-entry debits and credits across ledger accounts.
+            Record balanced double-entry debits and credits across general ledger accounts.
           </DialogDescription>
         </DialogHeader>
-        <JournalEntryForm onSuccess={() => setOpen(false)} inDialog />
+        <JournalEntryForm
+          onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+          inDialog
+        />
       </DialogContent>
     </Dialog>
   );

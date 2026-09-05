@@ -21,14 +21,18 @@ export function UserFormDialog({ trigger }: UserFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Staff User</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Staff User</DialogTitle>
           <DialogDescription>
-            Create an Admin or Accountant account.
+            Create an internal staff member with Admin or Accountant access permissions.
           </DialogDescription>
         </DialogHeader>
-        <CreateUserForm onSuccess={() => setOpen(false)} inDialog />
+        <CreateUserForm
+          onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+          inDialog
+        />
       </DialogContent>
     </Dialog>
   );

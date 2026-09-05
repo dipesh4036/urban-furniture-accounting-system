@@ -26,10 +26,11 @@ function roundToCents(value: number): number {
 
 interface SalesOrderFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
   inDialog?: boolean;
 }
 
-export function SalesOrderForm({ onSuccess, inDialog = false }: SalesOrderFormProps = {}) {
+export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesOrderFormProps = {}) {
   const createSalesOrder = useCreateSalesOrder();
 
   const {
@@ -71,11 +72,11 @@ export function SalesOrderForm({ onSuccess, inDialog = false }: SalesOrderFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
-      {!inDialog && <h2 className="text-sm font-semibold">New Sales Order</h2>}
+    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-5", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-base font-semibold tracking-tight">New Sales Order</h2>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="customerId">
             Customer
             <RequiredMark />
@@ -87,115 +88,145 @@ export function SalesOrderForm({ onSuccess, inDialog = false }: SalesOrderFormPr
               <CustomerCombobox value={field.value} onChange={field.onChange} invalid={!!errors.customerId} />
             )}
           />
-          {errors.customerId && <p className="text-sm text-destructive">{errors.customerId.message}</p>}
+          {errors.customerId && <p className="text-xs text-destructive">{errors.customerId.message}</p>}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="date">
-            Date
+            Order Date
             <RequiredMark />
           </Label>
           <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-          {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
+          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-[1fr_90px_120px_100px_40px] gap-2 px-1 text-sm font-medium text-muted-foreground">
-          <span>
-            Product
-            <RequiredMark />
+      {/* Order Line Items */}
+      <div className="flex flex-col gap-3 pt-2">
+        <div className="flex items-center justify-between border-t border-border/50 pt-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Order Line Items
           </span>
-          <span>
-            Quantity
-            <RequiredMark />
-          </span>
-          <span>
-            Unit Price
-            <RequiredMark />
-          </span>
-          <span>
-            Tax
-            <RequiredMark />
-          </span>
-          <span />
         </div>
 
-        {fields.map((field, index) => (
-          <div key={field.id} className="grid grid-cols-[1fr_90px_120px_100px_40px] items-start gap-2">
-            <Controller
-              control={control}
-              name={`items.${index}.productId`}
-              render={({ field: productField }) => (
-                <ProductCombobox
-                  value={productField.value}
-                  onChange={productField.onChange}
-                  invalid={!!errors.items?.[index]?.productId}
-                />
-              )}
-            />
-
-            <Input
-              type="number"
-              step="1"
-              min="1"
-              aria-invalid={!!errors.items?.[index]?.quantity}
-              {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-            />
-
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              aria-invalid={!!errors.items?.[index]?.unitPrice}
-              {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-            />
-
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              aria-invalid={!!errors.items?.[index]?.tax}
-              {...register(`items.${index}.tax`, { valueAsNumber: true })}
-            />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => remove(index)}
-              disabled={fields.length <= 1}
-              aria-label="Remove line"
-            >
-              <Trash2 className="size-4" />
-            </Button>
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+            <span>
+              Product
+              <RequiredMark />
+            </span>
+            <span>
+              Qty
+              <RequiredMark />
+            </span>
+            <span>
+              Unit Price ($)
+              <RequiredMark />
+            </span>
+            <span>
+              Tax ($)
+              <RequiredMark />
+            </span>
+            <span />
           </div>
-        ))}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => append({ ...emptySalesOrderItem })}
-        >
-          <Plus className="size-4" />
-          Add product
+          {fields.map((field, index) => (
+            <div key={field.id} className="grid grid-cols-[1fr_85px_110px_90px_40px] items-start gap-2">
+              <Controller
+                control={control}
+                name={`items.${index}.productId`}
+                render={({ field: productField }) => (
+                  <ProductCombobox
+                    value={productField.value}
+                    onChange={productField.onChange}
+                    invalid={!!errors.items?.[index]?.productId}
+                  />
+                )}
+              />
+
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                placeholder="1"
+                aria-invalid={!!errors.items?.[index]?.quantity}
+                {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+              />
+
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                aria-invalid={!!errors.items?.[index]?.unitPrice}
+                {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+              />
+
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                aria-invalid={!!errors.items?.[index]?.tax}
+                {...register(`items.${index}.tax`, { valueAsNumber: true })}
+              />
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(index)}
+                disabled={fields.length <= 1}
+                aria-label="Remove line"
+              >
+                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start mt-1"
+            onClick={() => append({ ...emptySalesOrderItem })}
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            Add product line
+          </Button>
+
+          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
+          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+        </div>
+      </div>
+
+      {/* Summary Row */}
+      <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+        <span className="font-medium text-muted-foreground">Order Total (incl. tax)</span>
+        <span className="text-base font-semibold tracking-tight">${total.toFixed(2)}</span>
+      </div>
+
+      <div
+        className={cn(
+          "flex items-center justify-end gap-2 pt-3",
+          inDialog ? "border-t border-border/40" : "self-start"
+        )}
+      >
+        {inDialog && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={createSalesOrder.isPending}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={createSalesOrder.isPending}>
+          {createSalesOrder.isPending && <Spinner className="mr-2 size-4" />}
+          {createSalesOrder.isPending ? "Saving..." : "Create Sales Order"}
         </Button>
-
-        {errors.items?.root && <p className="text-sm text-destructive">{errors.items.root.message}</p>}
-        {errors.items?.message && <p className="text-sm text-destructive">{errors.items.message}</p>}
       </div>
-
-      <div className="flex justify-between gap-8 self-end border-t pt-1 text-sm">
-        <span className="text-muted-foreground">Total</span>
-        <span className="font-medium">{total.toFixed(2)}</span>
-      </div>
-
-      <Button type="submit" disabled={createSalesOrder.isPending} className="self-start">
-        {createSalesOrder.isPending && <Spinner />}
-        {createSalesOrder.isPending ? "Saving..." : "Create Sales Order"}
-      </Button>
     </form>
   );
 }

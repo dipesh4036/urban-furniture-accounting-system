@@ -21,14 +21,18 @@ export function PurchaseOrderFormDialog({ trigger }: PurchaseOrderFormDialogProp
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Purchase Order</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Purchase Order</DialogTitle>
           <DialogDescription>
-            Place an order with a vendor for raw materials or merchandise.
+            Place an order with a vendor for raw materials, hardware, or inventory items.
           </DialogDescription>
         </DialogHeader>
-        <PurchaseOrderForm onSuccess={() => setOpen(false)} inDialog />
+        <PurchaseOrderForm
+          onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+          inDialog
+        />
       </DialogContent>
     </Dialog>
   );

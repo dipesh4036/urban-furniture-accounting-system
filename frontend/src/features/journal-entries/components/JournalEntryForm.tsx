@@ -30,10 +30,11 @@ function roundToCents(value: number): number {
 
 interface JournalEntryFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
   inDialog?: boolean;
 }
 
-export function JournalEntryForm({ onSuccess, inDialog = false }: JournalEntryFormProps = {}) {
+export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: JournalEntryFormProps = {}) {
   const { data: journalsData, isLoading: isLoadingJournals } = useJournals({ limit: 100 });
   const createJournalEntry = useCreateJournalEntry();
 
@@ -79,11 +80,11 @@ export function JournalEntryForm({ onSuccess, inDialog = false }: JournalEntryFo
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-4", !inDialog && "rounded-lg border p-6")}>
-      {!inDialog && <h2 className="text-sm font-semibold">New Journal Entry</h2>}
+    <form onSubmit={handleSubmit(onSubmit)} className={cn("flex flex-col gap-5", !inDialog && "rounded-lg border p-6")}>
+      {!inDialog && <h2 className="text-base font-semibold tracking-tight">New Journal Entry</h2>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="journalId">
             Journal
             <RequiredMark />
@@ -94,18 +95,10 @@ export function JournalEntryForm({ onSuccess, inDialog = false }: JournalEntryFo
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="journalId" className="w-full" aria-invalid={!!errors.journalId}>
-                  {/*
-                    SelectValue can only show a label by matching the
-                    selected value against an `items` list passed to
-                    Select itself - it does NOT read the text inside
-                    <SelectItem> children. Without this render-function
-                    form, it falls back to printing the raw value (here,
-                    the journal's id) instead of its name.
-                  */}
-                  <SelectValue placeholder={isLoadingJournals ? "Loading..." : "Select a journal"}>
+                  <SelectValue placeholder={isLoadingJournals ? "Loading..." : "Select journal"}>
                     {(selectedId: string) =>
                       journalsData?.journals.find((journal) => journal.id === selectedId)?.name ??
-                      (isLoadingJournals ? "Loading..." : "Select a journal")
+                      (isLoadingJournals ? "Loading..." : "Select journal")
                     }
                   </SelectValue>
                 </SelectTrigger>
@@ -119,124 +112,170 @@ export function JournalEntryForm({ onSuccess, inDialog = false }: JournalEntryFo
               </Select>
             )}
           />
-          {errors.journalId && <p className="text-sm text-destructive">{errors.journalId.message}</p>}
+          {errors.journalId && <p className="text-xs text-destructive">{errors.journalId.message}</p>}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="date">
-            Date
+            Entry Date
             <RequiredMark />
           </Label>
           <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-          {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
+          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="reference">
             Reference
             <RequiredMark />
           </Label>
-          <Input id="reference" aria-invalid={!!errors.reference} {...register("reference")} />
-          {errors.reference && <p className="text-sm text-destructive">{errors.reference.message}</p>}
+          <Input
+            id="reference"
+            placeholder="e.g. INV/2026/001"
+            aria-invalid={!!errors.reference}
+            {...register("reference")}
+          />
+          {errors.reference && <p className="text-xs text-destructive">{errors.reference.message}</p>}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-[1fr_140px_140px_40px] gap-2 px-1 text-sm font-medium text-muted-foreground">
-          <span>
-            Account
-            <RequiredMark />
+      {/* Journal Entry Lines */}
+      <div className="flex flex-col gap-3 pt-2">
+        <div className="flex items-center justify-between border-t border-border/50 pt-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Debit & Credit Lines (Double Entry)
           </span>
-          <span>
-            Debit
-            <RequiredMark />
-          </span>
-          <span>
-            Credit
-            <RequiredMark />
-          </span>
-          <span />
         </div>
 
-        {fields.map((field, index) => (
-          <div key={field.id} className="grid grid-cols-[1fr_140px_140px_40px] items-start gap-2">
-            <Controller
-              control={control}
-              name={`items.${index}.accountId`}
-              render={({ field: accountField }) => (
-                <AccountCombobox
-                  value={accountField.value}
-                  onChange={accountField.onChange}
-                  invalid={!!errors.items?.[index]?.accountId}
-                />
-              )}
-            />
-
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              aria-invalid={!!errors.items?.[index]?.debit}
-              {...register(`items.${index}.debit`, { valueAsNumber: true })}
-            />
-
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              aria-invalid={!!errors.items?.[index]?.credit}
-              {...register(`items.${index}.credit`, { valueAsNumber: true })}
-            />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => remove(index)}
-              disabled={fields.length <= 2}
-              aria-label="Remove line"
-            >
-              <Trash2 className="size-4" />
-            </Button>
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[1fr_130px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+            <span>
+              Account
+              <RequiredMark />
+            </span>
+            <span>
+              Debit ($)
+              <RequiredMark />
+            </span>
+            <span>
+              Credit ($)
+              <RequiredMark />
+            </span>
+            <span />
           </div>
-        ))}
 
+          {fields.map((field, index) => (
+            <div key={field.id} className="grid grid-cols-[1fr_130px_130px_40px] items-start gap-2">
+              <Controller
+                control={control}
+                name={`items.${index}.accountId`}
+                render={({ field: accountField }) => (
+                  <AccountCombobox
+                    value={accountField.value}
+                    onChange={accountField.onChange}
+                    invalid={!!errors.items?.[index]?.accountId}
+                  />
+                )}
+              />
+
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                aria-invalid={!!errors.items?.[index]?.debit}
+                {...register(`items.${index}.debit`, { valueAsNumber: true })}
+              />
+
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                aria-invalid={!!errors.items?.[index]?.credit}
+                {...register(`items.${index}.credit`, { valueAsNumber: true })}
+              />
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(index)}
+                disabled={fields.length <= 2}
+                aria-label="Remove line"
+              >
+                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start mt-1"
+            onClick={() => append({ ...emptyJournalItem })}
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            Add line
+          </Button>
+
+          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
+          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+        </div>
+      </div>
+
+      {/* Balance Verification Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/30 p-3.5 text-sm">
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Total Debit</span>
+            <span className="font-semibold text-foreground">${totalDebit.toFixed(2)}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Total Credit</span>
+            <span className="font-semibold text-foreground">${totalCredit.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">Status:</span>
+          {isBalanced ? (
+            <span className="inline-flex items-center rounded-md bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+              Balanced (Diff: $0.00)
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-md bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
+              Unbalanced (Diff: ${Math.abs(difference).toFixed(2)})
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "flex items-center justify-end gap-2 pt-3",
+          inDialog ? "border-t border-border/40" : "self-start"
+        )}
+      >
+        {inDialog && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={createJournalEntry.isPending}
+          >
+            Cancel
+          </Button>
+        )}
         <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => append({ ...emptyJournalItem })}
+          type="submit"
+          disabled={!isBalanced || createJournalEntry.isPending}
         >
-          <Plus className="size-4" />
-          Add line
+          {createJournalEntry.isPending && <Spinner className="mr-2 size-4" />}
+          {createJournalEntry.isPending ? "Saving..." : "Save Journal Entry"}
         </Button>
-
-        {errors.items?.root && <p className="text-sm text-destructive">{errors.items.root.message}</p>}
-        {errors.items?.message && <p className="text-sm text-destructive">{errors.items.message}</p>}
       </div>
-
-      <div className="flex flex-col gap-1 self-end text-sm">
-        <div className="flex justify-between gap-8">
-          <span className="text-muted-foreground">Total Debit</span>
-          <span className="font-medium">{totalDebit.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between gap-8">
-          <span className="text-muted-foreground">Total Credit</span>
-          <span className="font-medium">{totalCredit.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between gap-8 border-t pt-1">
-          <span className="text-muted-foreground">Difference</span>
-          <span className={isBalanced ? "font-medium text-success" : "font-medium text-destructive"}>
-            {difference.toFixed(2)}
-          </span>
-        </div>
-      </div>
-
-      <Button type="submit" disabled={!isBalanced || createJournalEntry.isPending} className="self-start">
-        {createJournalEntry.isPending && <Spinner />}
-        {createJournalEntry.isPending ? "Saving..." : "Save Journal Entry"}
-      </Button>
     </form>
   );
 }

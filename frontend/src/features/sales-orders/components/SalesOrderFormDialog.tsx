@@ -21,14 +21,18 @@ export function SalesOrderFormDialog({ trigger }: SalesOrderFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>New Sales Order</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">New Sales Order</DialogTitle>
           <DialogDescription>
-            Create an order from a customer with line items and taxes.
+            Create a customer sales order with individual items, quantities, pricing, and taxes.
           </DialogDescription>
         </DialogHeader>
-        <SalesOrderForm onSuccess={() => setOpen(false)} inDialog />
+        <SalesOrderForm
+          onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+          inDialog
+        />
       </DialogContent>
     </Dialog>
   );
