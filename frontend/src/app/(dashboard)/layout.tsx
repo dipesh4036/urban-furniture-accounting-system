@@ -19,6 +19,7 @@ const navItems = [
   // category link above, or given their own real place in the nav.
   { label: "Chart of Accounts", href: "/accounts" },
   { label: "Products", href: "/products" },
+  { label: "Journals", href: "/journals" },
   { label: "Reports", href: "/reports" },
   { label: "Users", href: "/users" },
 ];

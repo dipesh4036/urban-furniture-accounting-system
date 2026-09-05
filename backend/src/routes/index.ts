@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { accountsRouter } from "./accounts.routes";
 import { authRouter } from "./auth.routes";
+import { journalsRouter } from "./journals.routes";
 import { productsRouter } from "./products.routes";
 import { usersRouter } from "./users.routes";
 
@@ -12,3 +13,4 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use("/accounts", accountsRouter);
 apiRouter.use("/products", productsRouter);
 apiRouter.use("/users", usersRouter);
+apiRouter.use("/journals", journalsRouter);
