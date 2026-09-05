@@ -107,13 +107,18 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
 }
 
 // If a User exists with this email, generate a reset token and email
-// it to them. If no User exists with this email, do nothing - but
-// don't tell the caller that. Otherwise an attacker could use this
-// endpoint to check which emails have accounts.
+// it to them. If no User exists with this email, throw a clear error so
+// the person knows to try a different email instead of waiting on an
+// email that will never arrive.
+//
+// NOTE: this intentionally reveals whether an email has an account,
+// which is normally an anti-pattern (it lets someone probe which emails
+// are registered) - this was a deliberate product decision to prioritize
+// clear UX for staff over that protection.
 export async function forgotPassword(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.isActive) {
-    return;
+    throw new AppError(404, "No account found with this email address", "EMAIL_NOT_FOUND");
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");

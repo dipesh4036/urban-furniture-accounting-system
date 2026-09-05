@@ -18,6 +18,7 @@ const navItems = [
   // category link above, or given their own real place in the nav.
   { label: "Chart of Accounts", href: "/accounts" },
   { label: "Products", href: "/products" },
+  { label: "Vendor Bills", href: "/vendor-bills" },
   { label: "Journals", href: "/journals" },
   { label: "Journal Entries", href: "/journal-entries" },
   { label: "Reports", href: "/reports" },

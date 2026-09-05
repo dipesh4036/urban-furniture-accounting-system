@@ -4,9 +4,12 @@ import { authRouter } from "./auth.routes";
 import { contactsRouter } from "./contacts.routes";
 import { journalEntriesRouter } from "./journal-entries.routes";
 import { journalsRouter } from "./journals.routes";
+import { paymentsRouter } from "./payments.routes";
 import { productsRouter } from "./products.routes";
+import { purchaseOrdersRouter } from "./purchase-orders.routes";
 import { uploadsRouter } from "./uploads.routes";
 import { usersRouter } from "./users.routes";
+import { vendorBillsRouter } from "./vendor-bills.routes";
 
 // This is where every feature's routes get mounted. More get added here
 // as each feature branch builds its routes.
@@ -20,3 +23,6 @@ apiRouter.use("/products", productsRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/journals", journalsRouter);
 apiRouter.use("/journal-entries", journalEntriesRouter);
+apiRouter.use("/payments", paymentsRouter);
+apiRouter.use("/purchase-orders", purchaseOrdersRouter);
+apiRouter.use("/vendor-bills", vendorBillsRouter);

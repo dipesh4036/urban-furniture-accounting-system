@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,25 +63,37 @@ export function CreateUserForm() {
       <h2 className="text-sm font-semibold">Create User</h2>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">
+          Name
+          <RequiredMark />
+        </Label>
         <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="loginId">Login Id</Label>
+        <Label htmlFor="loginId">
+          Login Id
+          <RequiredMark />
+        </Label>
         <Input id="loginId" aria-invalid={!!errors.loginId} {...register("loginId")} />
         {errors.loginId && <p className="text-sm text-destructive">{errors.loginId.message}</p>}
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">
+          Email
+          <RequiredMark />
+        </Label>
         <Input id="email" type="email" aria-invalid={!!errors.email} {...register("email")} />
         {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Role</Label>
+        <Label>
+          Role
+          <RequiredMark />
+        </Label>
         <Controller
           control={control}
           name="role"
@@ -100,13 +113,19 @@ export function CreateUserForm() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">
+            Password
+            <RequiredMark />
+          </Label>
           <Input id="password" type="password" aria-invalid={!!errors.password} {...register("password")} />
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="confirmPassword">Re-enter Password</Label>
+          <Label htmlFor="confirmPassword">
+            Re-enter Password
+            <RequiredMark />
+          </Label>
           <Input
             id="confirmPassword"
             type="password"

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
+import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -150,13 +151,19 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">
+              Name
+              <RequiredMark />
+            </Label>
             <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">
+              Type
+              <RequiredMark />
+            </Label>
             <Controller
               control={control}
               name="type"
@@ -179,32 +186,47 @@ export function ContactFormDialog({ contact, trigger }: ContactFormDialogProps) 
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">
+              Email
+              <RequiredMark />
+            </Label>
             <Input id="email" type="email" aria-invalid={!!errors.email} {...register("email")} />
             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="mobile">Mobile</Label>
+            <Label htmlFor="mobile">
+              Mobile
+              <RequiredMark />
+            </Label>
             <Input id="mobile" type="tel" aria-invalid={!!errors.mobile} {...register("mobile")} />
             {errors.mobile && <p className="text-sm text-destructive">{errors.mobile.message}</p>}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="city">City</Label>
+              <Label htmlFor="city">
+                City
+                <RequiredMark />
+              </Label>
               <Input id="city" aria-invalid={!!errors.city} {...register("city")} />
               {errors.city && <p className="text-sm text-destructive">{errors.city.message}</p>}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="state">State</Label>
+              <Label htmlFor="state">
+                State
+                <RequiredMark />
+              </Label>
               <Input id="state" aria-invalid={!!errors.state} {...register("state")} />
               {errors.state && <p className="text-sm text-destructive">{errors.state.message}</p>}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="pincode">Pincode</Label>
+              <Label htmlFor="pincode">
+                Pincode
+                <RequiredMark />
+              </Label>
               <Input id="pincode" aria-invalid={!!errors.pincode} {...register("pincode")} />
               {errors.pincode && <p className="text-sm text-destructive">{errors.pincode.message}</p>}
             </div>

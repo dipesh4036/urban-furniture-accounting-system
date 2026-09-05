@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { AccountCombobox } from "@/components/common/AccountCombobox";
+import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +76,10 @@ export function JournalEntryForm() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="journalId">Journal</Label>
+          <Label htmlFor="journalId">
+            Journal
+            <RequiredMark />
+          </Label>
           <Controller
             control={control}
             name="journalId"
@@ -111,13 +115,19 @@ export function JournalEntryForm() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="date">
+            Date
+            <RequiredMark />
+          </Label>
           <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
           {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reference">Reference</Label>
+          <Label htmlFor="reference">
+            Reference
+            <RequiredMark />
+          </Label>
           <Input id="reference" aria-invalid={!!errors.reference} {...register("reference")} />
           {errors.reference && <p className="text-sm text-destructive">{errors.reference.message}</p>}
         </div>
@@ -125,9 +135,18 @@ export function JournalEntryForm() {
 
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-[1fr_140px_140px_40px] gap-2 px-1 text-sm font-medium text-muted-foreground">
-          <span>Account</span>
-          <span>Debit</span>
-          <span>Credit</span>
+          <span>
+            Account
+            <RequiredMark />
+          </span>
+          <span>
+            Debit
+            <RequiredMark />
+          </span>
+          <span>
+            Credit
+            <RequiredMark />
+          </span>
           <span />
         </div>
 

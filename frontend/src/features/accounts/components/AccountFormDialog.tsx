@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -96,13 +97,19 @@ export function AccountFormDialog({ account, trigger }: AccountFormDialogProps) 
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">
+              Name
+              <RequiredMark />
+            </Label>
             <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">
+              Type
+              <RequiredMark />
+            </Label>
             <Controller
               control={control}
               name="type"
