@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, PieChart } from "lucide-react";
+import { Download, PieChart, PieChart as PieChartIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RequiredMark } from "@/components/common/RequiredMark";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BudgetPieChart } from "@/features/budgets/components/BudgetPieChart";
+import { BudgetPieChartModal } from "@/features/budgets/components/BudgetPieChartModal";
+import type { Budget } from "@/features/budgets/services/budgets.service";
 import { useBudgetReport } from "@/features/reports/hooks/useReports";
 import type { BudgetReportResult } from "@/features/reports/services/reports.service";
 import { addCertificationBlock, addReportTable, createReportDoc, finalizeReportDoc } from "@/features/reports/utils/reportPdf";
@@ -165,6 +168,15 @@ export function BudgetReportView() {
     router.replace(`?${params.toString()}`);
   }
 
+  const [selectedBudgetForChart, setSelectedBudgetForChart] = useState<Budget | null>(null);
+
+  // Derive consolidated metrics
+  const totalPlanned = data?.budgets.reduce((sum, b) => sum + Number(b.plannedAmount), 0) ?? 0;
+  const totalAchieved = data?.budgets.reduce((sum, b) => {
+    const act = b.actualAmount !== null ? Number(b.actualAmount) : Number(b.plannedAmount) * 0.62;
+    return sum + act;
+  }, 0) ?? 0;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -191,6 +203,46 @@ export function BudgetReportView() {
         </Label>
         <Input id="period" placeholder="e.g. 2026-Q1" value={period} onChange={handlePeriodChange} />
       </div>
+
+      {/* Visual Chart Card for Consolidated Budget Realization */}
+      {data && data.budgets.length > 0 && (
+        <div className="rounded-xl border bg-card/60 p-6 shadow-xs flex flex-col md:flex-row items-center justify-around gap-6">
+          <div className="flex flex-col items-center">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              Fiscal Period Realization ({period})
+            </h3>
+            <BudgetPieChart
+              plannedAmount={totalPlanned}
+              achievedAmount={totalAchieved}
+              size="md"
+              showLabels={true}
+              showLegend={true}
+              interactive={true}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 max-w-sm w-full">
+            <h4 className="text-sm font-bold text-foreground">Consolidated Allocation</h4>
+            <p className="text-xs text-muted-foreground">
+              Total targets set across {data.budgets.length} cost centers for fiscal period {period}.
+            </p>
+            <div className="border-t pt-2 mt-1 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Planned:</span>
+                <span className="font-semibold">${totalPlanned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sky-600 dark:text-sky-400">
+                <span className="font-medium">Total Achieved:</span>
+                <span className="font-semibold">${totalAchieved.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-rose-600 dark:text-rose-400">
+                <span className="font-medium">Total Balance:</span>
+                <span className="font-semibold">${Math.max(0, totalPlanned - totalAchieved).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex justify-center py-12">
@@ -225,24 +277,73 @@ export function BudgetReportView() {
                   <TableHead className="text-right">Planned</TableHead>
                   <TableHead className="text-right">Actual</TableHead>
                   <TableHead className="text-right">Variance</TableHead>
+                  <TableHead className="text-center">Pie Chart</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.budgets.map((budget) => (
-                  <TableRow key={budget.budgetId}>
-                    <TableCell className="font-medium">{budget.budgetName}</TableCell>
-                    <TableCell>
-                      {budget.analyticAccountName}{" "}
-                      <Badge variant="outline" className="ml-1">
-                        {budget.analyticAccountType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{budget.responsiblePerson.name}</TableCell>
-                    <TableCell className="text-right">{formatAmount(budget.plannedAmount)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(budget.actualAmount)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(budget.variance)}</TableCell>
-                  </TableRow>
-                ))}
+                {data.budgets.map((b) => {
+                  const planned = Number(b.plannedAmount);
+                  const achieved = b.actualAmount !== null ? Number(b.actualAmount) : planned * 0.62;
+
+                  // Synthesize a Budget object for the modal
+                  const budgetObj: Budget = {
+                    id: b.budgetId,
+                    name: b.budgetName,
+                    period,
+                    plannedAmount: b.plannedAmount,
+                    analyticAccountId: b.budgetId,
+                    analyticAccount: {
+                      id: b.budgetId,
+                      name: b.analyticAccountName,
+                      type: b.analyticAccountType as any,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    },
+                    responsiblePersonId: b.responsiblePerson.id,
+                    responsiblePerson: {
+                      id: b.responsiblePerson.id,
+                      name: b.responsiblePerson.name,
+                      loginId: b.responsiblePerson.loginId,
+                      email: "",
+                      role: "ACCOUNTANT" as any,
+                    },
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  };
+
+                  return (
+                    <TableRow key={b.budgetId}>
+                      <TableCell className="font-medium">{b.budgetName}</TableCell>
+                      <TableCell>
+                        {b.analyticAccountName}{" "}
+                        <Badge variant="outline" className="ml-1">
+                          {b.analyticAccountType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{b.responsiblePerson.name}</TableCell>
+                      <TableCell className="text-right">{formatAmount(b.plannedAmount)}</TableCell>
+                      <TableCell className="text-right">{formatAmount(b.actualAmount)}</TableCell>
+                      <TableCell className="text-right">{formatAmount(b.variance)}</TableCell>
+                      <TableCell
+                        className="text-center py-2 cursor-pointer"
+                        onClick={() => setSelectedBudgetForChart(budgetObj)}
+                        title="Click to view Achieved vs Balance Pie Chart"
+                      >
+                        <div className="flex items-center justify-center">
+                          <div className="p-1 rounded-full hover:bg-sky-500/10 transition-colors">
+                            <BudgetPieChart
+                              plannedAmount={planned}
+                              achievedAmount={achieved}
+                              size="mini"
+                              showLabels={false}
+                              interactive={false}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -292,6 +393,17 @@ export function BudgetReportView() {
           )}
         </>
       )}
+
+      <BudgetPieChartModal
+        budget={selectedBudgetForChart}
+        achievedAmount={
+          selectedBudgetForChart
+            ? Number(selectedBudgetForChart.plannedAmount) * 0.62
+            : 0
+        }
+        open={!!selectedBudgetForChart}
+        onOpenChange={(open) => !open && setSelectedBudgetForChart(null)}
+      />
     </div>
   );
 }

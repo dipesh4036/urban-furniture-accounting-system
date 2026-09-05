@@ -109,35 +109,36 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
           </span>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
-            <span>
-              Product
-              <RequiredMark />
-            </span>
-            <span>
-              Qty
-              <RequiredMark />
-            </span>
-            <span>
-              Unit Price ($)
-              <RequiredMark />
-            </span>
-            <span>
-              Tax ($)
-              <RequiredMark />
-            </span>
-            <span />
-          </div>
+        <div className="overflow-x-auto pb-1">
+          <div className="min-w-[540px] flex flex-col gap-2">
+            <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+              <span>
+                Product
+                <RequiredMark />
+              </span>
+              <span>
+                Qty
+                <RequiredMark />
+              </span>
+              <span>
+                Unit Price ($)
+                <RequiredMark />
+              </span>
+              <span>
+                Tax ($)
+                <RequiredMark />
+              </span>
+              <span />
+            </div>
 
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[1fr_85px_110px_90px_40px] items-start gap-2">
-              <Controller
-                control={control}
-                name={`items.${index}.productId`}
-                render={({ field: productField }) => (
-                  <ProductCombobox
-                    value={productField.value}
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-[1fr_85px_110px_90px_40px] items-start gap-2">
+                <Controller
+                  control={control}
+                  name={`items.${index}.productId`}
+                  render={({ field: productField }) => (
+                    <ProductCombobox
+                      value={productField.value}
                     onChange={productField.onChange}
                     invalid={!!errors.items?.[index]?.productId}
                   />
@@ -199,6 +200,7 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
           {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
         </div>
       </div>
+    </div>
 
       {/* Summary Row */}
       <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm">

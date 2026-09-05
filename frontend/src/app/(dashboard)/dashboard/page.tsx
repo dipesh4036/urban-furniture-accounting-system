@@ -44,6 +44,8 @@ import { useContacts } from "@/features/contacts/hooks/useContacts";
 import { useProducts } from "@/features/products/hooks/useProducts";
 import { SalesOrderForm } from "@/features/sales-orders/components/SalesOrderForm";
 import { PurchaseOrderForm } from "@/features/purchase-orders/components/PurchaseOrderForm";
+import { BudgetFormDialog } from "@/features/budgets/components/BudgetFormDialog";
+import { JournalEntryForm } from "@/features/journal-entries/components/JournalEntryForm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -127,6 +129,8 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [isSalesDialogOpen, setIsSalesDialogOpen] = useState(false);
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
+  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+  const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
 
   // Queries for live metrics
   const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = useSalesOrders();
@@ -599,15 +603,26 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground">Allocations & variance tracking</p>
                     </div>
                   </div>
-                  <Link href="/reports/budget-report">
+                  <div className="flex items-center gap-2">
+                    <Link href="/reports/budget-report">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 rounded-lg border-violet-500/30 text-violet-600 hover:bg-violet-500/10 hover:text-violet-700 shadow-2xs font-medium px-3 h-8 text-xs"
+                      >
+                        <BarChart3 className="size-3.5" />
+                        <span>Report</span>
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
+                      onClick={() => setIsBudgetDialogOpen(true)}
                       className="gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
                     >
-                      <BarChart3 className="size-3.5" />
-                      <span>Report</span>
+                      <Plus className="size-3.5" />
+                      <span>New</span>
                     </Button>
-                  </Link>
+                  </div>
                 </div>
 
                 {/* 3 Metric Pills / Boxes (Achieved, Budget, Committed) */}
@@ -650,8 +665,8 @@ export default function DashboardPage() {
                   <TrendingUp className="size-3.5 text-violet-500" />
                   <span>Planned: <strong className="text-foreground font-semibold">{formatMoney(totalPlannedBudget)}</strong></span>
                 </div>
-                <Link href="/reports/profit-loss" className="flex items-center gap-1 font-medium text-violet-600 hover:underline">
-                  <span>P&L Statement</span>
+                <Link href="/reports/budget-report" className="flex items-center gap-1 font-medium text-violet-600 hover:underline">
+                  <span>Budget Report</span>
                   <ArrowRight className="size-3" />
                 </Link>
               </div>
@@ -662,7 +677,7 @@ export default function DashboardPage() {
           {(activeTab === "all" || activeTab === "account") && (
             <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-xs transition-all duration-300 hover:shadow-md hover:border-amber-500/40">
               <div className="flex flex-col gap-4">
-                {/* Header with Title and "Manage" Action Button */}
+                {/* Header with Title and "New" Action Button */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
@@ -673,15 +688,14 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground">Chart of accounts & journal entries</p>
                     </div>
                   </div>
-                  <Link href="/journal-entries">
-                    <Button
-                      size="sm"
-                      className="gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
-                    >
-                      <Plus className="size-3.5" />
-                      <span>New Entry</span>
-                    </Button>
-                  </Link>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsEntryDialogOpen(true)}
+                    className="gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-2xs font-medium px-3.5 h-8 text-xs"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>New Entry</span>
+                  </Button>
                 </div>
 
                 {/* 4 Metric Pills (Journals, Total Entries, Accounts, Contacts) */}
@@ -947,9 +961,9 @@ export default function DashboardPage() {
 
       {/* 7. Quick "New Sales Order" Dialog Modal */}
       <Dialog open={isSalesDialogOpen} onOpenChange={setIsSalesDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Create New Sales Order</DialogTitle>
+            <DialogTitle className="text-lg font-semibold tracking-tight">New Sales Order</DialogTitle>
             <DialogDescription>
               Draft a new customer sales order with line items, quantities, and taxes.
             </DialogDescription>
@@ -969,9 +983,9 @@ export default function DashboardPage() {
 
       {/* 8. Quick "New Purchase Order" Dialog Modal */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Create New Purchase Order</DialogTitle>
+            <DialogTitle className="text-lg font-semibold tracking-tight">New Purchase Order</DialogTitle>
             <DialogDescription>
               Draft a new purchase order for supplier goods, raw timber, and inventory.
             </DialogDescription>
@@ -983,6 +997,39 @@ export default function DashboardPage() {
               onSuccess={() => {
                 setIsPurchaseDialogOpen(false);
                 refetchPurchase();
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick "New Budget" Dialog Modal */}
+      <BudgetFormDialog
+        open={isBudgetDialogOpen}
+        onOpenChange={(open) => {
+          setIsBudgetDialogOpen(open);
+          if (!open) refetchBudgets();
+        }}
+      />
+
+      {/* Quick "New Journal Entry" Dialog Modal */}
+      <Dialog open={isEntryDialogOpen} onOpenChange={setIsEntryDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold tracking-tight">New Journal Entry</DialogTitle>
+            <DialogDescription>
+              Record balanced double-entry debits and credits across general ledger accounts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <JournalEntryForm
+              inDialog={true}
+              onCancel={() => setIsEntryDialogOpen(false)}
+              onSuccess={() => {
+                setIsEntryDialogOpen(false);
+                refetchEntries();
+                refetchJournals();
+                refetchAccounts();
               }}
             />
           </div>
