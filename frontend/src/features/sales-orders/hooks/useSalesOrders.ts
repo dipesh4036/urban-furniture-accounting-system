@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  confirmSalesOrder,
   createSalesOrder,
   generateInvoice,
   listSalesOrders,
@@ -7,6 +8,7 @@ import {
   type GenerateInvoiceInput,
   type ListSalesOrdersParams,
 } from "../services/sales-orders.service";
+
 
 // Query key convention from frontend-nextjs SKILL.md:
 // lists -> [feature, "list", params].
@@ -30,6 +32,17 @@ export function useCreateSalesOrder() {
   });
 }
 
+export function useConfirmSalesOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => confirmSalesOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales-orders", "list"] });
+    },
+  });
+}
+
 export function useGenerateInvoice() {
   const queryClient = useQueryClient();
 
@@ -44,3 +57,4 @@ export function useGenerateInvoice() {
     },
   });
 }
+

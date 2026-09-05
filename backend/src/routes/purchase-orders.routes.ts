@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  confirmPurchaseOrderController,
   convertPurchaseOrderToBillController,
   createPurchaseOrderController,
   getPurchaseOrderByIdController,
@@ -19,9 +20,11 @@ purchaseOrdersRouter.use(authenticate, authorize("ADMIN", "ACCOUNTANT"));
 
 purchaseOrdersRouter.post("/", validate(createPurchaseOrderSchema), createPurchaseOrderController);
 purchaseOrdersRouter.get("/", validate(listPurchaseOrdersQuerySchema, "query"), listPurchaseOrdersController);
+purchaseOrdersRouter.post("/:id/confirm", confirmPurchaseOrderController);
 purchaseOrdersRouter.post(
   "/:id/convert-to-bill",
   validate(convertPurchaseOrderToBillSchema),
   convertPurchaseOrderToBillController
 );
 purchaseOrdersRouter.get("/:id", getPurchaseOrderByIdController);
+

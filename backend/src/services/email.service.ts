@@ -54,10 +54,11 @@ interface InvoiceForEmail {
 }
 
 export async function sendInvoiceEmail(invoice: InvoiceForEmail): Promise<boolean> {
-  const viewLink = `${env.CORS_ORIGIN}/portal/invoices/${invoice.id}`;
+  const viewLink = `${env.CORS_ORIGIN}/portal/invoices`;
   const html = invoiceEmail(invoice.invoiceNumber, invoice.customerName, invoice.totalAmount, viewLink);
   return sendMail({
     to: invoice.customerEmail,
+
     subject: `Invoice ${invoice.invoiceNumber} from Urban Furniture`,
     html,
   });

@@ -6,9 +6,11 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { RequiredMark } from "@/components/common/RequiredMark";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -101,93 +103,132 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit product" : "New product"}</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            {isEditing ? "Edit Product" : "New Product"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Update product specifications, categorization, and pricing."
+              : "Add a physical good, service, or combo item to your catalog."}
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">
-              Name
-              <RequiredMark />
-            </Label>
-            <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="type">
-              Type
-              <RequiredMark />
-            </Label>
-            <Controller
-              control={control}
-              name="type"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {productTypeLabels[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="salesPrice">
-                Sales price
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-2 flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="name">
+                Product Name
                 <RequiredMark />
               </Label>
               <Input
-                id="salesPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                aria-invalid={!!errors.salesPrice}
-                {...register("salesPrice")}
+                id="name"
+                placeholder="e.g. Ergonomic Office Chair"
+                aria-invalid={!!errors.name}
+                {...register("name")}
               />
-              {errors.salesPrice && <p className="text-sm text-destructive">{errors.salesPrice.message}</p>}
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="costPrice">
-                Cost price
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="type">
+                Product Type
                 <RequiredMark />
               </Label>
-              <Input
-                id="costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                aria-invalid={!!errors.costPrice}
-                {...register("costPrice")}
+              <Controller
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {productTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {productTypeLabels[type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               />
-              {errors.costPrice && <p className="text-sm text-destructive">{errors.costPrice.message}</p>}
+              {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="category">
               Category
               <RequiredMark />
             </Label>
-            <Input id="category" aria-invalid={!!errors.category} {...register("category")} />
-            {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+            <Input
+              id="category"
+              placeholder="e.g. Seating, Desks, Storage, Lighting"
+              aria-invalid={!!errors.category}
+              {...register("category")}
+            />
+            {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
           </div>
 
-          <DialogFooter>
+          {/* Pricing & Valuation Section */}
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="border-t border-border/50 pt-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Pricing & Valuation
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="salesPrice">
+                  Sales Price ($)
+                  <RequiredMark />
+                </Label>
+                <Input
+                  id="salesPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.salesPrice}
+                  {...register("salesPrice")}
+                />
+                {errors.salesPrice && <p className="text-xs text-destructive">{errors.salesPrice.message}</p>}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="costPrice">
+                  Cost Price ($)
+                  <RequiredMark />
+                </Label>
+                <Input
+                  id="costPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  aria-invalid={!!errors.costPrice}
+                  {...register("costPrice")}
+                />
+                {errors.costPrice && <p className="text-xs text-destructive">{errors.costPrice.message}</p>}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving && <Spinner className="mr-2 size-4" />}
+              {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Create Product"}
             </Button>
           </DialogFooter>
         </form>

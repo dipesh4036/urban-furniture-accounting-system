@@ -10,8 +10,11 @@ export const transporter = nodemailer.createTransport({
   // Port 465 uses TLS from the start ("secure"). Other ports (like 587)
   // start plain and upgrade to TLS - nodemailer handles that on its own.
   secure: env.SMTP_PORT === 465,
+  connectionTimeout: 10000, // 10s timeout to prevent hanging connections
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
   auth: {
     user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
+    pass: env.SMTP_PASS.replace(/\s+/g, ""),
   },
 });

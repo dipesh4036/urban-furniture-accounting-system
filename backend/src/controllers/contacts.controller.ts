@@ -45,3 +45,14 @@ export const updateContactController = asyncHandler(async (req: Request, res: Re
     timestamp: new Date().toISOString(),
   });
 });
+
+export const resendActivationEmailController = asyncHandler(async (req: Request, res: Response) => {
+  const result = await contactsService.resendActivationEmail(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: result.message,
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+});

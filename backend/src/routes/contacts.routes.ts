@@ -3,6 +3,7 @@ import {
   createContactController,
   getContactByIdController,
   listContactsController,
+  resendActivationEmailController,
   updateContactController,
 } from "../controllers/contacts.controller";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
@@ -55,3 +56,4 @@ contactsRouter.patch(
   validate(updateContactSchema),
   updateContactController
 );
+contactsRouter.post("/:id/resend-activation", authorize("ADMIN", "ACCOUNTANT"), resendActivationEmailController);
