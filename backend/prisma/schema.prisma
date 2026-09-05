@@ -158,6 +158,7 @@ enum DocStatus {
 }
 
 enum PaymentType {
+  RECEIPT
   PAYMENT
   REFUND
 }
@@ -300,6 +301,37 @@ model VendorBill {
   @@map("vendor_bills")
 }
 
+model SalesOrder {
+  id        String           @id @default(cuid())
+  soNumber  String           @unique
+  customerId String
+  customer  Contact          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  date      DateTime
+  status    OrderStatus      @default(DRAFT)
+  items     SalesOrderItem[]
+  invoice   CustomerInvoice?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  tax          Decimal    @db.Decimal(10, 2) @default(0)
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
 model CustomerInvoice {
   id            String      @id @default(cuid())
   invoiceNumber String      @unique
@@ -337,36 +369,5 @@ model Payment {
   @@index([vendorBillId])
   @@index([customerInvoiceId])
   @@map("payments")
-}
-
-model SalesOrder {
-  id        String           @id @default(cuid())
-  soNumber  String           @unique
-  customerId String
-  customer  Contact          @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  date      DateTime
-  status    OrderStatus      @default(DRAFT)
-  items     SalesOrderItem[]
-  invoice   CustomerInvoice?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  @@index([customerId])
-  @@map("sales_orders")
-}
-
-model SalesOrderItem {
-  id           String     @id @default(cuid())
-  salesOrderId String
-  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  productId    String
-  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity     Int
-  unitPrice    Decimal    @db.Decimal(10, 2)
-  tax          Decimal    @db.Decimal(10, 2) @default(0)
-
-  @@index([salesOrderId])
-  @@index([productId])
-  @@map("sales_order_items")
 }
 
