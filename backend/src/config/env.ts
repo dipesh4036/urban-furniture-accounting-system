@@ -11,6 +11,11 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required"),
+  // Rate limiting. Defaults are generous enough for a dev session (React
+  // Query refetches, HMR reloads); tighten via .env in production.
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
   SMTP_PORT: z.coerce.number().int().positive(),
   SMTP_USER: z.string().min(1, "SMTP_USER is required"),

@@ -1,30 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Plus, User } from "lucide-react";
+import { Eye, Lock, Mail, MoreVertical, Pencil, Plus, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { ViewToggle, type ViewMode } from "@/components/common/ViewToggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { ContactFormDialog } from "@/features/contacts/components/ContactFormDialog";
+import { ContactDetailsDialog } from "@/features/contacts/components/ContactDetailsDialog";
 import { useContacts, useResendActivationEmail, useUpdateContact } from "@/features/contacts/hooks/useContacts";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
+import { cn } from "cn";
+import type { Contact, ContactType } from "@/features/contacts/services/contacts.service";
+
+function getContactStatus(contact: { isActive: boolean; isActivated: boolean }): string {
+  if (!contact.isActive) return "INACTIVE";
+  if (!contact.isActivated) return "ACTIVATION_PENDING";
+  return "ACTIVE";
+}
 
 export default function ContactsPage() {
   const [view, setView] = useState<ViewMode>("list");
-  const { data, isLoading, isError, refetch } = useContacts();
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [viewingContact, setViewingContact] = useState<Contact | null>(null);
+  const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  const {
+    searchInput,
+    search,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+  } = useServerDataTable({
+    defaultPageSize: 10,
+    initialFilters: { type: "ALL", status: "ALL" },
+  });
+
+  // Server-side search/filter/pagination - every keystroke (debounced)
+  // and every filter/page change triggers a fresh GET /contacts request.
+  const { data, isLoading, isError, refetch } = useContacts({
+    search: search || undefined,
+    type: filters.type === "ALL" ? undefined : (filters.type as ContactType),
+    status: filters.status === "ALL" ? undefined : (filters.status as "ACTIVE" | "INACTIVE" | "PENDING_ACTIVATION"),
+    page: currentPage,
+    limit: pageSize,
+  });
   const updateContact = useUpdateContact();
   const resendEmail = useResendActivationEmail();
 
-  // Archiving is just PATCH /contacts/:id with { isActive: false } - there's
-  // no separate archive endpoint (see contacts.service.ts).
-  async function handleArchive(id: string) {
+  const totalItems = data?.meta.total || 0;
+  const totalPages = data?.meta.totalPages || 0;
+  const paginatedData = data?.contacts || [];
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
+
+  async function handleDeactivate(id: string) {
     try {
       await updateContact.mutateAsync({ id, input: { isActive: false } });
-      toast.success("Contact archived");
+      toast.success("Contact set to inactive");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function handleActivate(id: string) {
+    try {
+      await updateContact.mutateAsync({ id, input: { isActive: true } });
+      toast.success("Contact set to active");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
@@ -39,26 +102,212 @@ export default function ContactsPage() {
     }
   }
 
+  // Drag and Drop handlers for Kanban
+  function handleDragStart(e: React.DragEvent, id: string) {
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedContactId(id);
+  }
+
+  function handleDragEnd() {
+    setDraggedContactId(null);
+    setDragOverColumn(null);
+  }
+
+  function handleDragOver(e: React.DragEvent, columnId: string) {
+    if (columnId === "PENDING_ACTIVATION") return; // Dropping into pending is disabled
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverColumn !== columnId) {
+      setDragOverColumn(columnId);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent, columnId: string) {
+    if (dragOverColumn === columnId) {
+      setDragOverColumn(null);
+    }
+  }
+
+  async function handleDrop(e: React.DragEvent, targetStatus: "ACTIVE" | "INACTIVE") {
+    e.preventDefault();
+    setDragOverColumn(null);
+    const id = e.dataTransfer.getData("text/plain") || draggedContactId;
+    if (!id) return;
+
+    const contact = paginatedData.find((c) => c.id === id);
+    if (!contact) return;
+
+    if (targetStatus === "ACTIVE" && !contact.isActive) {
+      await handleActivate(id);
+    } else if (targetStatus === "INACTIVE" && contact.isActive) {
+      await handleDeactivate(id);
+    }
+    setDraggedContactId(null);
+  }
+
+  // Kanban status groups
+  const activeContacts = paginatedData.filter((c) => c.isActive && c.isActivated);
+  const inactiveContacts = paginatedData.filter((c) => !c.isActive);
+  const pendingContacts = paginatedData.filter((c) => c.isActive && !c.isActivated);
+
+  function renderContactCard(contact: Contact) {
+    const isPending = !contact.isActivated;
+    const isDragging = draggedContactId === contact.id;
+
+    return (
+      <Card
+        key={contact.id}
+        draggable={!isPending}
+        onDragStart={(e) => handleDragStart(e, contact.id)}
+        onDragEnd={handleDragEnd}
+        onClick={() => setViewingContact(contact)}
+        className={cn(
+          "flex flex-col justify-between transition-all hover:shadow-md hover:border-primary/40 group bg-card",
+          !isPending ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+          isDragging && "opacity-40 ring-2 ring-primary/40 border-dashed"
+        )}
+      >
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2.5 p-3.5">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            {contact.profileImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={toFileUrl(contact.profileImage)}
+                alt={contact.name}
+                className="size-9 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                {contact.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h3
+                className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors"
+                title={contact.name}
+              >
+                {contact.name}
+              </h3>
+              <StatusBadge status={contact.type} showDot={false} size="sm" className="mt-1" />
+            </div>
+          </div>
+
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <MoreVertical className="size-3.5" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => setViewingContact(contact)}>
+                  <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                  <span>View Details</span>
+                </DropdownMenuItem>
+                {!contact.isActivated && (
+                  <DropdownMenuItem
+                    onClick={() => handleResendEmail(contact.id)}
+                    disabled={resendEmail.isPending}
+                  >
+                    <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                    <span>Resend Link</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {contact.isActive ? (
+                  <DropdownMenuItem
+                    onClick={() => handleDeactivate(contact.id)}
+                    disabled={updateContact.isPending}
+                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                  >
+                    <UserX className="size-3.5 mr-2" />
+                    <span>Deactivate</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => handleActivate(contact.id)}
+                    disabled={updateContact.isPending}
+                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                  >
+                    <UserCheck className="size-3.5 mr-2" />
+                    <span>Activate</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 p-3.5 pt-0 text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Mail className="size-3 shrink-0" />
+            <span className="truncate" title={contact.email}>
+              {contact.email}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Location:</span>
+            <span className="font-medium text-foreground truncate max-w-[130px]">
+              {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
-          <p className="text-sm text-muted-foreground">Customers and vendors.</p>
+          <p className="text-sm text-muted-foreground">Manage your directory of customers and vendors.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onViewChange={setView} />
           <ContactFormDialog
             trigger={
-              <Button size="sm">
-                <Plus className="mr-2 size-4" />
+              <Button>
+                <Plus className="size-4" />
                 New Contact
               </Button>
             }
           />
         </div>
       </div>
+
+      {/* Controlled View Contact Details Modal */}
+      <ContactDetailsDialog
+        contact={viewingContact}
+        open={!!viewingContact}
+        onOpenChange={(open) => {
+          if (!open) setViewingContact(null);
+        }}
+        onEdit={(contact) => setEditingContact(contact)}
+      />
+
+      {/* Controlled Edit Contact Modal */}
+      <ContactFormDialog
+        contact={editingContact ?? undefined}
+        open={!!editingContact}
+        onOpenChange={(open) => {
+          if (!open) setEditingContact(null);
+        }}
+      />
 
       {isLoading && (
         <div className="flex flex-col gap-2">
@@ -83,7 +332,7 @@ export default function ContactsPage() {
           <ContactFormDialog
             trigger={
               <Button size="sm" variant="outline">
-                <Plus className="mr-2 size-4" />
+                <Plus className="size-4" />
                 Create your first contact
               </Button>
             }
@@ -92,154 +341,300 @@ export default function ContactsPage() {
       )}
 
       {!isLoading && !isError && data && data.contacts.length > 0 && (
-        <>
-          {view === "list" ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.contacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>
-                      {contact.profileImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={toFileUrl(contact.profileImage)}
-                          alt=""
-                          className="size-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                          <User className="size-4" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{contact.name}</TableCell>
-                    <TableCell>{contact.type}</TableCell>
-                    <TableCell>{contact.email}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant={contact.isActive ? "default" : "secondary"}>
-                          {contact.isActive ? "Active" : "Archived"}
-                        </Badge>
-                        {!contact.isActivated && <Badge variant="outline">Activation Pending</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {!contact.isActivated && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResendEmail(contact.id)}
-                            disabled={resendEmail.isPending}
-                          >
-                            Resend Link
-                          </Button>
-                        )}
-                        <ContactFormDialog contact={contact} trigger={<Button variant="outline" size="sm">Edit</Button>} />
-                        {contact.isActive && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleArchive(contact.id)}
-                            disabled={updateContact.isPending}
-                          >
-                            Archive
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            searchQuery={searchInput}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search name, email, phone, city..."
+            filters={[
+              {
+                key: "type",
+                label: "All Types",
+                options: [
+                  { label: "All Types", value: "ALL" },
+                  { label: "Customers", value: "CUSTOMER" },
+                  { label: "Vendors", value: "VENDOR" },
+                  { label: "Both", value: "BOTH" },
+                ],
+              },
+              {
+                key: "status",
+                label: "All Statuses",
+                options: [
+                  { label: "All Statuses", value: "ALL" },
+                  { label: "Active", value: "ACTIVE" },
+                  { label: "Inactive", value: "INACTIVE" },
+                  { label: "Activation Pending", value: "PENDING_ACTIVATION" },
+                ],
+              },
+            ]}
+            activeFilters={filters}
+            onFilterChange={setFilter}
+            isFiltered={isFiltered}
+            onResetFilters={resetFilters}
+            totalResults={totalItems}
+            unfilteredTotal={totalItems}
+          />
+
+          {paginatedData.length === 0 ? (
+            <DataTableEmptyState onReset={resetFilters} />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.contacts.map((contact) => (
-                <Card key={contact.id} className="flex flex-col justify-between transition-all hover:shadow-md">
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                    <div className="flex items-center gap-3">
-                      {contact.profileImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={toFileUrl(contact.profileImage)}
-                          alt={contact.name}
-                          className="size-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <User className="size-5" />
-                        </div>
+            <>
+              {view === "list" ? (
+                <div className="w-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[180px]">Contact Name</TableHead>
+                        <TableHead className="w-[120px]">Type</TableHead>
+                        <TableHead className="min-w-[160px]">Email</TableHead>
+                        <TableHead className="min-w-[120px]">Location</TableHead>
+                        <TableHead className="w-[140px]">Status</TableHead>
+                        <TableHead className="w-[90px] text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedData.map((contact) => (
+                        <TableRow key={contact.id}>
+                          <TableCell className="max-w-[220px]">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {contact.profileImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={toFileUrl(contact.profileImage)}
+                                  alt=""
+                                  className="size-8 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                                  {contact.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-semibold text-foreground truncate" title={contact.name}>
+                                {contact.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={contact.type} showDot={false} size="sm" />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            <span className="truncate block max-w-[200px]" title={contact.email}>
+                              {contact.email}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            <span
+                              className="truncate block max-w-[160px]"
+                              title={[contact.city, contact.state].filter(Boolean).join(", ")}
+                            >
+                              {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={getContactStatus(contact)} size="sm" />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                onClick={() => setViewingContact(contact)}
+                                title="View Details"
+                              >
+                                <Eye className="size-4" />
+                                <span className="sr-only">View Details</span>
+                              </Button>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    >
+                                      <MoreVertical className="size-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  }
+                                />
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem onClick={() => setViewingContact(contact)}>
+                                    <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>View Details</span>
+                                  </DropdownMenuItem>
+                                  {!contact.isActivated && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleResendEmail(contact.id)}
+                                      disabled={resendEmail.isPending}
+                                    >
+                                      <Mail className="size-3.5 mr-2 text-muted-foreground" />
+                                      <span>Resend Link</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                    <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {contact.isActive ? (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeactivate(contact.id)}
+                                      disabled={updateContact.isPending}
+                                      className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                                    >
+                                      <UserX className="size-3.5 mr-2" />
+                                      <span>Deactivate</span>
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => handleActivate(contact.id)}
+                                      disabled={updateContact.isPending}
+                                      className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                                    >
+                                      <UserCheck className="size-3.5 mr-2" />
+                                      <span>Activate</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Kanban Status Board with Drag and Drop */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Column 1: Active */}
+                    <div
+                      onDragOver={(e) => handleDragOver(e, "ACTIVE")}
+                      onDragLeave={(e) => handleDragLeave(e, "ACTIVE")}
+                      onDrop={(e) => handleDrop(e, "ACTIVE")}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-xl border p-4 transition-all min-h-[420px]",
+                        dragOverColumn === "ACTIVE"
+                          ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 ring-2 ring-emerald-500/30"
+                          : "border-border/70 bg-muted/20"
                       )}
-                      <div>
-                        <h3 className="font-semibold text-foreground line-clamp-1">{contact.name}</h3>
-                        <Badge variant="outline" className="mt-1 text-[10px]">
-                          {contact.type}
-                        </Badge>
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-emerald-500" />
+                          <h3 className="font-semibold text-sm text-foreground">Active</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                            {activeContacts.length}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground font-medium">Drop to activate</span>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pb-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="size-3.5 shrink-0" />
-                      <span className="truncate text-xs">{contact.email}</span>
+
+                      <div className="flex flex-col gap-3 flex-1">
+                        {activeContacts.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center flex-1 rounded-lg border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+                            No active contacts
+                          </div>
+                        ) : (
+                          activeContacts.map((contact) => renderContactCard(contact))
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      <Badge variant={contact.isActive ? "default" : "secondary"}>
-                        {contact.isActive ? "Active" : "Archived"}
-                      </Badge>
-                      {!contact.isActivated && <Badge variant="outline">Activation Pending</Badge>}
+                    {/* Column 2: Inactive */}
+                    <div
+                      onDragOver={(e) => handleDragOver(e, "INACTIVE")}
+                      onDragLeave={(e) => handleDragLeave(e, "INACTIVE")}
+                      onDrop={(e) => handleDrop(e, "INACTIVE")}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-xl border p-4 transition-all min-h-[420px]",
+                        dragOverColumn === "INACTIVE"
+                          ? "border-rose-500 bg-rose-50/40 dark:bg-rose-950/20 ring-2 ring-rose-500/30"
+                          : "border-border/70 bg-muted/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-rose-500" />
+                          <h3 className="font-semibold text-sm text-foreground">Inactive</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60">
+                            {inactiveContacts.length}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground font-medium">Drop to deactivate</span>
+                      </div>
+
+                      <div className="flex flex-col gap-3 flex-1">
+                        {inactiveContacts.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center flex-1 rounded-lg border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+                            No inactive contacts
+                          </div>
+                        ) : (
+                          inactiveContacts.map((contact) => renderContactCard(contact))
+                        )}
+                      </div>
                     </div>
-                  </CardContent>
-                  <CardFooter className="flex flex-wrap justify-end gap-2 border-t pt-3">
-                    {!contact.isActivated && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => handleResendEmail(contact.id)}
-                        disabled={resendEmail.isPending}
-                      >
-                        Resend Link
-                      </Button>
-                    )}
-                    <ContactFormDialog
-                      contact={contact}
-                      trigger={
-                        <Button variant="outline" size="sm" className="h-8 text-xs">
-                          Edit
-                        </Button>
-                      }
-                    />
-                    {contact.isActive && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => handleArchive(contact.id)}
-                        disabled={updateContact.isPending}
-                      >
-                        Archive
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+
+                    {/* Column 3: Activation Pending (Drop Disabled) */}
+                    <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 min-h-[420px]">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-amber-500" />
+                          <h3 className="font-semibold text-sm text-foreground">Activation Pending</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                            {pendingContacts.length}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+                          <Lock className="size-3 text-muted-foreground" />
+                          <span>No Drop</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-3 flex-1">
+                        {pendingContacts.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center flex-1 rounded-lg border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+                            No pending activations
+                          </div>
+                        ) : (
+                          pendingContacts.map((contact) => renderContactCard(contact))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                    className="border bg-card rounded-lg"
+                  />
+                </div>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
-

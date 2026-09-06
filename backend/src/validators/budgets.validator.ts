@@ -9,7 +9,17 @@ export const createBudgetSchema = z.object({
 });
 export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 
+export const updateBudgetSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  period: z.string().min(1, "Period is required").optional(),
+  plannedAmount: z.number().positive("Planned amount must be positive").optional(),
+  analyticAccountId: z.string().cuid("analyticAccountId must be a valid id").optional(),
+  responsiblePersonId: z.string().cuid("responsiblePersonId must be a valid id").optional(),
+});
+export type UpdateBudgetInput = z.infer<typeof updateBudgetSchema>;
+
 export const listBudgetsQuerySchema = z.object({
+  search: z.string().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

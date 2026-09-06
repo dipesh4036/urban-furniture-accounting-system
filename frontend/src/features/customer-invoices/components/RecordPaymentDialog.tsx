@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { usePayCustomerInvoice } from "../hooks/useCustomerInvoices";
 import {
   paymentFormSchema,
@@ -44,14 +45,18 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
     formState: { errors },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
-    defaultValues: { amount: 0, method: "" as never, date: "" },
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: { amount: "" as unknown as number, method: "" as never, date: "" },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: PaymentFormValues) {
     try {
       await payCustomerInvoice.mutateAsync({ invoiceId, input: values });
       toast.success("Payment recorded successfully");
-      reset({ amount: 0, method: "" as never, date: "" });
+      reset({ amount: "" as unknown as number, method: "" as never, date: "" });
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
@@ -73,7 +78,7 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="amount">
-                Payment Amount ($)
+                Payment Amount (₹)
                 <RequiredMark />
               </Label>
               <Input
@@ -81,11 +86,13 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.amount}
-                {...register("amount", { valueAsNumber: true })}
+                placeholder="₹1,000.00"
+                aria-invalid={firstErrorField === "amount"}
+                {...register("amount")}
               />
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+              {firstErrorField === "amount" && errors.amount && (
+                <p className="text-xs text-destructive">{errors.amount.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -93,8 +100,10 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
                 Payment Date
                 <RequiredMark />
               </Label>
-              <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-              {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+              <Input id="date" type="date" aria-invalid={firstErrorField === "date"} {...register("date")} />
+              {firstErrorField === "date" && errors.date && (
+                <p className="text-xs text-destructive">{errors.date.message}</p>
+              )}
             </div>
           </div>
 
@@ -108,7 +117,7 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
               name="method"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="method" className="w-full" aria-invalid={!!errors.method}>
+                  <SelectTrigger id="method" className="w-full" aria-invalid={firstErrorField === "method"}>
                     <SelectValue placeholder="Select payment method">
                       {(selected: string) =>
                         paymentMethodLabels[selected as keyof typeof paymentMethodLabels] ?? "Select payment method"
@@ -125,7 +134,9 @@ export function RecordPaymentDialog({ invoiceId, trigger }: RecordPaymentDialogP
                 </Select>
               )}
             />
-            {errors.method && <p className="text-xs text-destructive">{errors.method.message}</p>}
+            {firstErrorField === "method" && errors.method && (
+              <p className="text-xs text-destructive">{errors.method.message}</p>
+            )}
           </div>
 
           <DialogFooter className="mt-2 pt-4 border-t border-border/40 flex flex-row items-center justify-end gap-2">

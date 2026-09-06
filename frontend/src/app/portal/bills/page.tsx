@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, FileText, Calendar, CreditCard, Receipt, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,19 +20,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTableToolbar } from "@/components/common/DataTableToolbar";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
+import { useDataTable } from "@/hooks/useDataTable";
 import { useVendorBills } from "@/features/vendor-bills/hooks/useVendorBills";
 import type { VendorBill, DocStatus } from "@/features/vendor-bills/services/vendor-bills.service";
 import { PortalPayDialog } from "@/features/portal/components/PortalPayDialog";
 
+import { StatusBadge } from "@/components/common/StatusBadge";
+
 function statusBadge(status: DocStatus) {
-  switch (status) {
-    case "PAID":
-      return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Paid</Badge>;
-    case "PARTIALLY_PAID":
-      return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">Partially Paid</Badge>;
-    default:
-      return <Badge variant="outline" className="text-muted-foreground">Unpaid</Badge>;
+  if (status === "UNPAID") {
+    return <StatusBadge status="PENDING" label="Unpaid" size="sm" />;
   }
+  return <StatusBadge status={status} size="sm" />;
 }
 
 function calculatePaidAmount(bill: VendorBill): number {
@@ -44,11 +46,45 @@ export default function PortalBillsPage() {
   const { data, isLoading, isError, refetch } = useVendorBills();
   const [selectedBill, setSelectedBill] = useState<VendorBill | null>(null);
 
-  const bills = data?.vendorBills ?? [];
+  const rawBills = useMemo(() => data?.vendorBills ?? [], [data?.vendorBills]);
+
+  const {
+    paginatedData,
+    filteredData,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+  } = useDataTable<VendorBill>({
+    data: rawBills,
+    searchFields: [
+      "billNumber",
+      "status",
+      (b) => b.vendor?.name ?? "",
+      (b) => new Date(b.invoiceDate).toLocaleDateString(),
+      (b) => new Date(b.dueDate).toLocaleDateString(),
+    ],
+    filterPredicate: (item, currentFilters) => {
+      const statusFilter = currentFilters.status;
+      if (statusFilter && statusFilter !== "ALL" && item.status !== statusFilter) {
+        return false;
+      }
+      return true;
+    },
+    defaultPageSize: 10,
+  });
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">My Bills</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -56,6 +92,31 @@ export default function PortalBillsPage() {
           </p>
         </div>
       </div>
+
+      {/* Toolbar */}
+      <DataTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search bills by number, date..."
+        filterOptions={[
+          {
+            key: "status",
+            title: "Payment Status",
+            options: [
+              { label: "All Statuses", value: "ALL" },
+              { label: "Unpaid", value: "UNPAID" },
+              { label: "Partially Paid", value: "PARTIALLY_PAID" },
+              { label: "Paid", value: "PAID" },
+            ],
+          },
+        ]}
+        selectedFilters={filters}
+        onFilterChange={setFilter}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+        totalCount={rawBills.length}
+        filteredCount={filteredData.length}
+      />
 
       {/* State 1: Loading */}
       {isLoading && (
@@ -81,7 +142,7 @@ export default function PortalBillsPage() {
       )}
 
       {/* State 3: Empty */}
-      {!isLoading && !isError && bills.length === 0 && (
+      {!isLoading && !isError && rawBills.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl border border-dashed border-border bg-card text-center">
           <div className="size-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
             <FileText className="size-6" />
@@ -93,77 +154,98 @@ export default function PortalBillsPage() {
         </div>
       )}
 
-      {/* State 4: Success Table */}
-      {!isLoading && !isError && bills.length > 0 && (
-        <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-[160px] font-semibold">Bill #</TableHead>
-                  <TableHead className="font-semibold">Invoice Date</TableHead>
-                  <TableHead className="font-semibold">Due Date</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="text-right font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-right font-semibold">Balance Due</TableHead>
-                  <TableHead className="text-right font-semibold w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bills.map((bill) => {
-                  const total = Number(bill.totalAmount);
-                  const paid = calculatePaidAmount(bill);
-                  const balanceDue = Math.max(0, total - paid);
+      {/* Filtered Empty State */}
+      {!isLoading && !isError && rawBills.length > 0 && filteredData.length === 0 && (
+        <DataTableEmptyState
+          icon={FileText}
+          title="No bills match your criteria"
+          description="Try resetting your filters or adjusting your search term."
+          onClear={resetFilters}
+        />
+      )}
 
-                  return (
-                    <TableRow key={bill.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium text-foreground">
-                        {bill.billNumber}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(bill.invoiceDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(bill.dueDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{statusBadge(bill.status)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        ${total.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {balanceDue === 0 ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">$0.00</span>
-                        ) : (
-                          <span className="text-foreground">${balanceDue.toFixed(2)}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedBill(bill)}
-                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            <Eye className="size-3.5" />
-                            View
-                          </Button>
-                          {bill.status !== "PAID" && (
-                            <PortalPayDialog
-                              type="bill"
-                              id={bill.id}
-                              referenceNumber={bill.billNumber}
-                              balanceDue={balanceDue}
-                            />
+      {/* State 4: Success Table */}
+      {!isLoading && !isError && paginatedData.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-[160px] font-semibold">Bill #</TableHead>
+                    <TableHead className="font-semibold">Invoice Date</TableHead>
+                    <TableHead className="font-semibold">Due Date</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="text-right font-semibold">Total Amount</TableHead>
+                    <TableHead className="text-right font-semibold">Balance Due</TableHead>
+                    <TableHead className="text-right font-semibold w-[120px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((bill) => {
+                    const total = Number(bill.totalAmount);
+                    const paid = calculatePaidAmount(bill);
+                    const balanceDue = Math.max(0, total - paid);
+
+                    return (
+                      <TableRow key={bill.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-medium text-foreground">
+                          {bill.billNumber}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(bill.invoiceDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(bill.dueDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{statusBadge(bill.status)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {balanceDue === 0 ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
+                          ) : (
+                            <span className="text-foreground">₹{balanceDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedBill(bill)}
+                              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              <Eye className="size-3.5" />
+                              View
+                            </Button>
+                            {bill.status !== "PAID" && (
+                              <PortalPayDialog
+                                type="bill"
+                                id={bill.id}
+                                referenceNumber={bill.billNumber}
+                                balanceDue={balanceDue}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
+
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
@@ -213,13 +295,13 @@ export default function PortalBillsPage() {
                   <div>
                     <span className="text-xs text-muted-foreground">Total Amount</span>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      ${Number(selectedBill.totalAmount).toFixed(2)}
+                      ₹{Number(selectedBill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Balance Due</span>
                     <p className="text-sm font-semibold text-foreground mt-0.5">
-                      ${Math.max(0, Number(selectedBill.totalAmount) - calculatePaidAmount(selectedBill)).toFixed(2)}
+                      ₹{Math.max(0, Number(selectedBill.totalAmount) - calculatePaidAmount(selectedBill)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -250,8 +332,8 @@ export default function PortalBillsPage() {
                           <TableRow className="bg-muted/40">
                             <TableHead className="text-xs font-medium">Item</TableHead>
                             <TableHead className="text-xs font-medium text-right">Qty</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Unit Price</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Total</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Unit Price (₹)</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Total (₹)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -261,8 +343,8 @@ export default function PortalBillsPage() {
                               <TableRow key={item.id || idx}>
                                 <TableCell className="text-xs font-medium">Item #{idx + 1}</TableCell>
                                 <TableCell className="text-xs text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-xs text-right">${Number(item.unitPrice).toFixed(2)}</TableCell>
-                                <TableCell className="text-xs text-right font-medium">${lineTotal.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-right">₹{Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-xs text-right font-medium">₹{lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             );
                           })}
@@ -285,7 +367,7 @@ export default function PortalBillsPage() {
                             <TableHead className="text-xs font-medium">Date</TableHead>
                             <TableHead className="text-xs font-medium">Method</TableHead>
                             <TableHead className="text-xs font-medium">Type</TableHead>
-                            <TableHead className="text-xs font-medium text-right">Amount</TableHead>
+                            <TableHead className="text-xs font-medium text-right">Amount (₹)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -297,7 +379,7 @@ export default function PortalBillsPage() {
                               <TableCell className="text-xs font-medium">{p.method}</TableCell>
                               <TableCell className="text-xs text-muted-foreground">{p.type}</TableCell>
                               <TableCell className="text-xs text-right font-semibold text-emerald-600 dark:text-emerald-400">
-                                +${Number(p.amount).toFixed(2)}
+                                +₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -318,3 +400,4 @@ export default function PortalBillsPage() {
     </div>
   );
 }
+

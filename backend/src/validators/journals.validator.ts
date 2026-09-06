@@ -12,6 +12,7 @@ export type CreateJournalInput = z.infer<typeof createJournalSchema>;
 // No update/archive endpoint for Journals per plan.md Module 7 - just
 // create and list.
 export const listJournalsQuerySchema = z.object({
+  search: z.string().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

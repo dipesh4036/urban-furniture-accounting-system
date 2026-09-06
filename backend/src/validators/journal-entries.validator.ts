@@ -32,6 +32,7 @@ export type CreateJournalEntryInput = z.infer<typeof createJournalEntrySchema>;
 // For GET /journal-entries?journalId=&from=&to=&page=&limit=
 export const listJournalEntriesQuerySchema = z.object({
   journalId: z.string().cuid().optional(),
+  search: z.string().optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   page: z.coerce.number().int().positive().optional(),

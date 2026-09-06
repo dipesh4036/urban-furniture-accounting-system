@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useJournals } from "@/features/journals/hooks/useJournals";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateJournalEntry } from "../hooks/useJournalEntries";
 import {
   emptyJournalItem,
@@ -46,6 +47,8 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
     formState: { errors },
   } = useForm<JournalEntryFormValues>({
     resolver: zodResolver(journalEntryFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       journalId: "",
       date: "",
@@ -58,6 +61,23 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const firstErrorField = getFirstErrorField(errors);
+
+  // The line items are a field array, so "first error" needs a second
+  // pass: which row, and which field within that row, is first to fail.
+  let firstItemIndex: number | undefined;
+  let firstItemField: string | undefined;
+  if (firstErrorField === "items" && Array.isArray(errors.items)) {
+    for (let i = 0; i < errors.items.length; i++) {
+      const rowError = errors.items[i];
+      if (rowError) {
+        firstItemIndex = i;
+        firstItemField = Object.keys(rowError)[0];
+        break;
+      }
+    }
+  }
 
   // Watches every line's debit/credit as the user types, so the totals
   // footer and the submit button's disabled state update live - not just
@@ -94,7 +114,7 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
             name="journalId"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="journalId" className="w-full" aria-invalid={!!errors.journalId}>
+                <SelectTrigger id="journalId" className="w-full" aria-invalid={firstErrorField === "journalId"}>
                   <SelectValue placeholder={isLoadingJournals ? "Loading..." : "Select journal"}>
                     {(selectedId: string) =>
                       journalsData?.journals.find((journal) => journal.id === selectedId)?.name ??
@@ -112,7 +132,9 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
               </Select>
             )}
           />
-          {errors.journalId && <p className="text-xs text-destructive">{errors.journalId.message}</p>}
+          {firstErrorField === "journalId" && errors.journalId && (
+            <p className="text-xs text-destructive">{errors.journalId.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -120,8 +142,10 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
             Entry Date
             <RequiredMark />
           </Label>
-          <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+          <Input id="date" type="date" aria-invalid={firstErrorField === "date"} {...register("date")} />
+          {firstErrorField === "date" && errors.date && (
+            <p className="text-xs text-destructive">{errors.date.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -132,10 +156,12 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
           <Input
             id="reference"
             placeholder="e.g. INV/2026/001"
-            aria-invalid={!!errors.reference}
+            aria-invalid={firstErrorField === "reference"}
             {...register("reference")}
           />
-          {errors.reference && <p className="text-xs text-destructive">{errors.reference.message}</p>}
+          {firstErrorField === "reference" && errors.reference && (
+            <p className="text-xs text-destructive">{errors.reference.message}</p>
+          )}
         </div>
       </div>
 
@@ -147,81 +173,92 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
           </span>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-[1fr_130px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
-            <span>
-              Account
-              <RequiredMark />
-            </span>
-            <span>
-              Debit ($)
-              <RequiredMark />
-            </span>
-            <span>
-              Credit ($)
-              <RequiredMark />
-            </span>
-            <span />
-          </div>
-
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[1fr_130px_130px_40px] items-start gap-2">
-              <Controller
-                control={control}
-                name={`items.${index}.accountId`}
-                render={({ field: accountField }) => (
-                  <AccountCombobox
-                    value={accountField.value}
-                    onChange={accountField.onChange}
-                    invalid={!!errors.items?.[index]?.accountId}
-                  />
-                )}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.debit}
-                {...register(`items.${index}.debit`, { valueAsNumber: true })}
-              />
-
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.credit}
-                {...register(`items.${index}.credit`, { valueAsNumber: true })}
-              />
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(index)}
-                disabled={fields.length <= 2}
-                aria-label="Remove line"
-              >
-                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-              </Button>
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-[540px] flex-col gap-2">
+            <div className="grid grid-cols-[1fr_130px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
+              <span>
+                Account
+                <RequiredMark />
+              </span>
+              <span>
+                Debit (₹)
+                <RequiredMark />
+              </span>
+              <span>
+                Credit (₹)
+                <RequiredMark />
+              </span>
+              <span />
             </div>
-          ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start mt-1"
-            onClick={() => append({ ...emptyJournalItem })}
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Add line
-          </Button>
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-[1fr_130px_130px_40px] items-start gap-2">
+                <Controller
+                  control={control}
+                  name={`items.${index}.accountId`}
+                  render={({ field: accountField }) => (
+                    <AccountCombobox
+                      value={accountField.value}
+                      onChange={accountField.onChange}
+                      invalid={firstItemIndex === index && firstItemField === "accountId"}
+                    />
+                  )}
+                />
 
-          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
-          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="₹500.00"
+                  aria-invalid={firstItemIndex === index && firstItemField === "debit"}
+                  {...register(`items.${index}.debit`)}
+                />
+
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="₹500.00"
+                  aria-invalid={firstItemIndex === index && firstItemField === "credit"}
+                  {...register(`items.${index}.credit`)}
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                  disabled={fields.length <= 2}
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start mt-1"
+              onClick={() => append({ ...emptyJournalItem })}
+            >
+              <Plus className="size-3.5" />
+              Add line
+            </Button>
+
+            {firstItemIndex !== undefined && firstItemField && (
+              <p className="text-xs text-destructive">
+                Line {firstItemIndex + 1}: {(errors.items?.[firstItemIndex] as Record<string, { message?: string }>)?.[firstItemField]?.message}
+              </p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.root && (
+              <p className="text-xs text-destructive">{errors.items.root.message}</p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.message && (
+              <p className="text-xs text-destructive">{errors.items.message}</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -230,11 +267,11 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Total Debit</span>
-            <span className="font-semibold text-foreground">${totalDebit.toFixed(2)}</span>
+            <span className="font-semibold text-foreground">₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Total Credit</span>
-            <span className="font-semibold text-foreground">${totalCredit.toFixed(2)}</span>
+            <span className="font-semibold text-foreground">₹{totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
 
@@ -242,11 +279,11 @@ export function JournalEntryForm({ onSuccess, onCancel, inDialog = false }: Jour
           <span className="text-xs text-muted-foreground">Status:</span>
           {isBalanced ? (
             <span className="inline-flex items-center rounded-md bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-              Balanced (Diff: $0.00)
+              Balanced (Diff: ₹0.00)
             </span>
           ) : (
             <span className="inline-flex items-center rounded-md bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
-              Unbalanced (Diff: ${Math.abs(difference).toFixed(2)})
+              Unbalanced (Diff: ₹{Math.abs(difference).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
             </span>
           )}
         </div>

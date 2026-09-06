@@ -74,6 +74,8 @@ export async function createSalesOrder(input: CreateSalesOrderInput) {
 }
 
 interface ListSalesOrdersOptions {
+  search?: string;
+  status?: OrderStatus;
   page?: number;
   limit?: number;
 }
@@ -82,14 +84,27 @@ export async function listSalesOrders(options: ListSalesOrdersOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
+  const where: Prisma.SalesOrderWhereInput = {
+    ...(options.status ? { status: options.status } : {}),
+    ...(options.search
+      ? {
+          OR: [
+            { soNumber: { contains: options.search } },
+            { customer: { name: { contains: options.search } } },
+          ],
+        }
+      : {}),
+  };
+
   const [orders, total] = await prisma.$transaction([
     prisma.salesOrder.findMany({
+      where,
       include: { items: true, customer: true },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { date: "desc" },
     }),
-    prisma.salesOrder.count(),
+    prisma.salesOrder.count({ where }),
   ]);
 
   return {
@@ -185,15 +200,26 @@ export async function generateInvoiceFromSalesOrder(
     });
   });
 
+  // Fire-and-forget: don't block the response on the mail server, but do
+  // record when the email actually went out so the invoices list can show
+  // "Email Sent: Yes" (CustomerInvoice.emailSentAt).
   sendInvoiceEmail({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
     totalAmount: invoice.totalAmount.toString(),
     customerEmail: invoice.customer.email,
     customerName: invoice.customer.name,
-  }).catch((error) => {
-    console.error(`Failed to send invoice email for invoice ${invoiceNumber}:`, error);
-  });
+  })
+    .then(async (sent) => {
+      if (!sent) return;
+      await prisma.customerInvoice.update({
+        where: { id: invoice.id },
+        data: { emailSentAt: new Date() },
+      });
+    })
+    .catch((error) => {
+      console.error(`Failed to send invoice email for invoice ${invoiceNumber}:`, error);
+    });
 
   return invoice;
 }

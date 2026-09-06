@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreateSalesOrder } from "../hooks/useSalesOrders";
 import {
   emptySalesOrderItem,
@@ -41,6 +42,8 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
     formState: { errors },
   } = useForm<SalesOrderFormValues>({
     resolver: zodResolver(salesOrderFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       customerId: "",
       date: "",
@@ -49,6 +52,21 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const firstErrorField = getFirstErrorField(errors);
+
+  let firstItemIndex: number | undefined;
+  let firstItemField: string | undefined;
+  if (firstErrorField === "items" && Array.isArray(errors.items)) {
+    for (let i = 0; i < errors.items.length; i++) {
+      const rowError = errors.items[i];
+      if (rowError) {
+        firstItemIndex = i;
+        firstItemField = Object.keys(rowError)[0];
+        break;
+      }
+    }
+  }
 
   // Watches every line's quantity/unitPrice/tax as the user types, so the
   // total footer updates live - not just when the form is submitted.
@@ -85,10 +103,12 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
             control={control}
             name="customerId"
             render={({ field }) => (
-              <CustomerCombobox value={field.value} onChange={field.onChange} invalid={!!errors.customerId} />
+              <CustomerCombobox value={field.value} onChange={field.onChange} invalid={firstErrorField === "customerId"} />
             )}
           />
-          {errors.customerId && <p className="text-xs text-destructive">{errors.customerId.message}</p>}
+          {firstErrorField === "customerId" && errors.customerId && (
+            <p className="text-xs text-destructive">{errors.customerId.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -96,8 +116,10 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
             Order Date
             <RequiredMark />
           </Label>
-          <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+          <Input id="date" type="date" aria-invalid={firstErrorField === "date"} {...register("date")} />
+          {firstErrorField === "date" && errors.date && (
+            <p className="text-xs text-destructive">{errors.date.message}</p>
+          )}
         </div>
       </div>
 
@@ -110,7 +132,7 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
         </div>
 
         <div className="overflow-x-auto pb-1">
-          <div className="min-w-[540px] flex flex-col gap-2">
+          <div className="flex min-w-[580px] flex-col gap-2">
             <div className="grid grid-cols-[1fr_85px_110px_90px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
               <span>
                 Product
@@ -121,11 +143,11 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
                 <RequiredMark />
               </span>
               <span>
-                Unit Price ($)
+                Unit Price (₹)
                 <RequiredMark />
               </span>
               <span>
-                Tax ($)
+                Tax (₹)
                 <RequiredMark />
               </span>
               <span />
@@ -139,73 +161,82 @@ export function SalesOrderForm({ onSuccess, onCancel, inDialog = false }: SalesO
                   render={({ field: productField }) => (
                     <ProductCombobox
                       value={productField.value}
-                    onChange={productField.onChange}
-                    invalid={!!errors.items?.[index]?.productId}
-                  />
-                )}
-              />
+                      onChange={productField.onChange}
+                      invalid={firstItemIndex === index && firstItemField === "productId"}
+                    />
+                  )}
+                />
 
-              <Input
-                type="number"
-                step="1"
-                min="1"
-                placeholder="1"
-                aria-invalid={!!errors.items?.[index]?.quantity}
-                {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-              />
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  placeholder="1"
+                  aria-invalid={firstItemIndex === index && firstItemField === "quantity"}
+                  {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+                />
 
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.unitPrice}
-                {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-              />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="₹500.00"
+                  aria-invalid={firstItemIndex === index && firstItemField === "unitPrice"}
+                  {...register(`items.${index}.unitPrice`)}
+                />
 
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                aria-invalid={!!errors.items?.[index]?.tax}
-                {...register(`items.${index}.tax`, { valueAsNumber: true })}
-              />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="₹50.00"
+                  aria-invalid={firstItemIndex === index && firstItemField === "tax"}
+                  {...register(`items.${index}.tax`)}
+                />
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(index)}
-                disabled={fields.length <= 1}
-                aria-label="Remove line"
-              >
-                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-              </Button>
-            </div>
-          ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                  disabled={fields.length <= 1}
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                </Button>
+              </div>
+            ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start mt-1"
-            onClick={() => append({ ...emptySalesOrderItem })}
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Add product line
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start mt-1"
+              onClick={() => append({ ...emptySalesOrderItem })}
+            >
+              <Plus className="size-3.5" />
+              Add product line
+            </Button>
 
-          {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
-          {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+            {firstItemIndex !== undefined && firstItemField && (
+              <p className="text-xs text-destructive">
+                Line {firstItemIndex + 1}: {(errors.items?.[firstItemIndex] as Record<string, { message?: string }>)?.[firstItemField]?.message}
+              </p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.root && (
+              <p className="text-xs text-destructive">{errors.items.root.message}</p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.message && (
+              <p className="text-xs text-destructive">{errors.items.message}</p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
 
       {/* Summary Row */}
       <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm">
         <span className="font-medium text-muted-foreground">Order Total (incl. tax)</span>
-        <span className="text-base font-semibold tracking-tight">${total.toFixed(2)}</span>
+        <span className="text-base font-semibold tracking-tight">₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
 
       <div

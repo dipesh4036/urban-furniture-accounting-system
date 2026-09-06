@@ -117,7 +117,7 @@ export async function createReportDoc(
     day: "numeric",
   });
   doc.text(`Generated: ${printDate}`, rightX, 18, { align: "right" });
-  doc.text("US GAAP • Accrual Basis • Currency: USD ($)", rightX, 22, { align: "right" });
+  doc.text("Ind AS • Accrual Basis • Currency: INR (Rs.)", rightX, 22, { align: "right" });
 
   // Thin Divider Line
   doc.setDrawColor(228, 228, 231);

@@ -10,6 +10,7 @@ export async function createProduct(input: CreateProductInput) {
 interface ListProductsOptions {
   type?: ProductType;
   search?: string;
+  status?: "ACTIVE" | "ARCHIVED" | "INACTIVE";
   page?: number;
   limit?: number;
 }
@@ -26,6 +27,8 @@ export async function listProducts(options: ListProductsOptions) {
 
   const where = {
     ...(options.type ? { type: options.type } : {}),
+    ...(options.status === "ACTIVE" ? { isActive: true } : {}),
+    ...(options.status === "ARCHIVED" || options.status === "INACTIVE" ? { isActive: false } : {}),
     ...(options.search ? { name: { contains: options.search } } : {}),
   };
 

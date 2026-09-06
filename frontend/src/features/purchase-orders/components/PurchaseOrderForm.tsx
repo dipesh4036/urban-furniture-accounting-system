@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useCreatePurchaseOrder } from "../hooks/usePurchaseOrders";
 import {
   emptyPurchaseOrderItem,
@@ -41,6 +42,8 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
     formState: { errors },
   } = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       vendorId: "",
       date: "",
@@ -49,6 +52,21 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const firstErrorField = getFirstErrorField(errors);
+
+  let firstItemIndex: number | undefined;
+  let firstItemField: string | undefined;
+  if (firstErrorField === "items" && Array.isArray(errors.items)) {
+    for (let i = 0; i < errors.items.length; i++) {
+      const rowError = errors.items[i];
+      if (rowError) {
+        firstItemIndex = i;
+        firstItemField = Object.keys(rowError)[0];
+        break;
+      }
+    }
+  }
 
   // Watches every line's quantity/unitPrice as the user types, so the
   // total footer updates live - not just when the form is submitted.
@@ -82,10 +100,12 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
             control={control}
             name="vendorId"
             render={({ field }) => (
-              <VendorCombobox value={field.value} onChange={field.onChange} invalid={!!errors.vendorId} />
+              <VendorCombobox value={field.value} onChange={field.onChange} invalid={firstErrorField === "vendorId"} />
             )}
           />
-          {errors.vendorId && <p className="text-xs text-destructive">{errors.vendorId.message}</p>}
+          {firstErrorField === "vendorId" && errors.vendorId && (
+            <p className="text-xs text-destructive">{errors.vendorId.message}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -93,8 +113,10 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
             PO Date
             <RequiredMark />
           </Label>
-          <Input id="date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+          <Input id="date" type="date" aria-invalid={firstErrorField === "date"} {...register("date")} />
+          {firstErrorField === "date" && errors.date && (
+            <p className="text-xs text-destructive">{errors.date.message}</p>
+          )}
         </div>
       </div>
 
@@ -106,8 +128,8 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
           </span>
         </div>
 
-        <div className="overflow-x-auto pb-1">
-          <div className="min-w-[520px] flex flex-col gap-2">
+          <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-[540px] flex-col gap-2">
             <div className="grid grid-cols-[1fr_90px_130px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground">
               <span>
                 Product
@@ -118,7 +140,7 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
                 <RequiredMark />
               </span>
               <span>
-                Unit Price ($)
+                Unit Price (₹)
                 <RequiredMark />
               </span>
               <span />
@@ -133,7 +155,7 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
                     <ProductCombobox
                       value={productField.value}
                       onChange={productField.onChange}
-                      invalid={!!errors.items?.[index]?.productId}
+                      invalid={firstItemIndex === index && firstItemField === "productId"}
                     />
                   )}
                 />
@@ -143,7 +165,7 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
                   step="1"
                   min="1"
                   placeholder="1"
-                  aria-invalid={!!errors.items?.[index]?.quantity}
+                  aria-invalid={firstItemIndex === index && firstItemField === "quantity"}
                   {...register(`items.${index}.quantity`, { valueAsNumber: true })}
                 />
 
@@ -151,9 +173,9 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0.00"
-                  aria-invalid={!!errors.items?.[index]?.unitPrice}
-                  {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+                  placeholder="₹500.00"
+                  aria-invalid={firstItemIndex === index && firstItemField === "unitPrice"}
+                  {...register(`items.${index}.unitPrice`)}
                 />
 
                 <Button
@@ -176,12 +198,21 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
               className="self-start mt-1"
               onClick={() => append({ ...emptyPurchaseOrderItem })}
             >
-              <Plus className="mr-1.5 size-3.5" />
+              <Plus className="size-3.5" />
               Add product line
             </Button>
 
-            {errors.items?.root && <p className="text-xs text-destructive">{errors.items.root.message}</p>}
-            {errors.items?.message && <p className="text-xs text-destructive">{errors.items.message}</p>}
+            {firstItemIndex !== undefined && firstItemField && (
+              <p className="text-xs text-destructive">
+                Line {firstItemIndex + 1}: {(errors.items?.[firstItemIndex] as Record<string, { message?: string }>)?.[firstItemField]?.message}
+              </p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.root && (
+              <p className="text-xs text-destructive">{errors.items.root.message}</p>
+            )}
+            {firstErrorField === "items" && firstItemIndex === undefined && errors.items?.message && (
+              <p className="text-xs text-destructive">{errors.items.message}</p>
+            )}
           </div>
         </div>
       </div>
@@ -189,7 +220,7 @@ export function PurchaseOrderForm({ onSuccess, onCancel, inDialog = false }: Pur
       {/* Summary Row */}
       <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm">
         <span className="font-medium text-muted-foreground">Order Total</span>
-        <span className="text-base font-semibold tracking-tight">${total.toFixed(2)}</span>
+        <span className="text-base font-semibold tracking-tight">₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
 
       <div

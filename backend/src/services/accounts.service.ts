@@ -9,6 +9,8 @@ export async function createAccount(input: CreateAccountInput) {
 
 interface ListAccountsOptions {
   type?: AccountType;
+  search?: string;
+  status?: "ACTIVE" | "ARCHIVED";
   page?: number;
   limit?: number;
 }
@@ -16,12 +18,17 @@ interface ListAccountsOptions {
 // Returns a page of accounts plus the pagination info the frontend needs
 // to render "page 2 of 5" style controls. Caps `limit` at 100 so nobody
 // can ask for the whole table in one request, per backend-express
-// SKILL.md's pagination rules.
+// SKILL.md's pagination rules. `search` matches on name only.
 export async function listAccounts(options: ListAccountsOptions) {
   const page = options.page && options.page > 0 ? options.page : 1;
   const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 20;
 
-  const where = options.type ? { type: options.type } : {};
+  const where = {
+    ...(options.type ? { type: options.type } : {}),
+    ...(options.status === "ACTIVE" ? { isActive: true } : {}),
+    ...(options.status === "ARCHIVED" ? { isActive: false } : {}),
+    ...(options.search ? { name: { contains: options.search } } : {}),
+  };
 
   const [accounts, total] = await prisma.$transaction([
     prisma.account.findMany({

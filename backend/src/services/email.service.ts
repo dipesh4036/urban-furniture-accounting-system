@@ -54,12 +54,26 @@ interface InvoiceForEmail {
 }
 
 export async function sendInvoiceEmail(invoice: InvoiceForEmail): Promise<boolean> {
+  if (!invoice.customerEmail || !invoice.customerEmail.trim()) return false;
+
   const viewLink = `${env.CORS_ORIGIN}/portal/invoices`;
   const html = invoiceEmail(invoice.invoiceNumber, invoice.customerName, invoice.totalAmount, viewLink);
+  const text = [
+    `Hi ${invoice.customerName},`,
+    ``,
+    `A new invoice has been generated for you.`,
+    ``,
+    `Invoice Number: ${invoice.invoiceNumber}`,
+    `Total Amount: ${invoice.totalAmount}`,
+    ``,
+    `View and pay your invoice: ${viewLink}`,
+    ``,
+    `Urban Furniture`,
+  ].join("\n");
   return sendMail({
     to: invoice.customerEmail,
-
     subject: `Invoice ${invoice.invoiceNumber} from Urban Furniture`,
     html,
+    text,
   });
 }

@@ -4,6 +4,7 @@ import { AppError } from "../utils/AppError";
 
 interface ListVendorBillsOptions {
   status?: string;
+  search?: string;
   page?: number;
   limit?: number;
   vendorId?: string;
@@ -19,6 +20,12 @@ export async function listVendorBills(options: ListVendorBillsOptions) {
   }
   if (options.vendorId) {
     where.vendorId = options.vendorId;
+  }
+  if (options.search) {
+    where.OR = [
+      { billNumber: { contains: options.search } },
+      { vendor: { name: { contains: options.search } } },
+    ];
   }
 
   const [bills, total] = await prisma.$transaction([

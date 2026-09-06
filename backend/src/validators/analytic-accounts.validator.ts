@@ -9,6 +9,8 @@ export const createAnalyticAccountSchema = z.object({
 export type CreateAnalyticAccountInput = z.infer<typeof createAnalyticAccountSchema>;
 
 export const listAnalyticAccountsQuerySchema = z.object({
+  search: z.string().optional(),
+  type: analyticTypeSchema.optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

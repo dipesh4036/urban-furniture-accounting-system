@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { useGenerateInvoice } from "../hooks/useSalesOrders";
 import { generateInvoiceFormSchema, type GenerateInvoiceFormValues } from "../validators/sales-orders.validator";
 
@@ -37,8 +38,12 @@ export function GenerateInvoiceDialog({ salesOrderId, trigger }: GenerateInvoice
     formState: { errors },
   } = useForm<GenerateInvoiceFormValues>({
     resolver: zodResolver(generateInvoiceFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: { invoiceDate: "", dueDate: "" },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: GenerateInvoiceFormValues) {
     try {
@@ -72,10 +77,12 @@ export function GenerateInvoiceDialog({ salesOrderId, trigger }: GenerateInvoice
               <Input
                 id="invoiceDate"
                 type="date"
-                aria-invalid={!!errors.invoiceDate}
+                aria-invalid={firstErrorField === "invoiceDate"}
                 {...register("invoiceDate")}
               />
-              {errors.invoiceDate && <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>}
+              {firstErrorField === "invoiceDate" && errors.invoiceDate && (
+                <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -83,8 +90,10 @@ export function GenerateInvoiceDialog({ salesOrderId, trigger }: GenerateInvoice
                 Payment Due Date
                 <RequiredMark />
               </Label>
-              <Input id="dueDate" type="date" aria-invalid={!!errors.dueDate} {...register("dueDate")} />
-              {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
+              <Input id="dueDate" type="date" aria-invalid={firstErrorField === "dueDate"} {...register("dueDate")} />
+              {firstErrorField === "dueDate" && errors.dueDate && (
+                <p className="text-xs text-destructive">{errors.dueDate.message}</p>
+              )}
             </div>
           </div>
 

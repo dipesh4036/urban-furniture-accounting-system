@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, DollarSign, PieChart as PieChartIcon, TrendingUp, User, Tag } from "lucide-react";
+import { CheckCircle2, IndianRupee, PieChart as PieChartIcon, TrendingUp, User, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,32 +38,32 @@ export function BudgetPieChartModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-4xl p-7">
         <DialogHeader className="border-b pb-4">
-          <div className="flex items-center justify-between gap-2 pr-6">
-            <div className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+          <div className="flex items-center justify-between gap-3 pr-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
                 <PieChartIcon className="size-5" />
               </div>
-              <div>
-                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+              <div className="min-w-0">
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground truncate" title={budget.name}>
                   {budget.name}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Budget Performance & Allocation Breakdown • Fiscal Period: {budget.period}
+                <DialogDescription className="text-xs text-muted-foreground truncate mt-0.5">
+                  Fiscal Period: <strong className="text-foreground font-semibold">{budget.period}</strong> • Cost Center: <span className="font-medium text-foreground">{budget.analyticAccount?.name ?? "General"}</span>
                 </DialogDescription>
               </div>
             </div>
-            <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-0.5">
-              Confirm
+            <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-3 py-1 text-xs shrink-0">
+              Active Target
             </Badge>
           </div>
         </DialogHeader>
 
-        <div className="mt-4 flex flex-col items-center gap-6">
-          {/* Main Visual: Pie Chart faithfully styled after user drawing */}
-          <div className="flex flex-col items-center rounded-xl border bg-card/60 p-6 shadow-xs w-full">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+          {/* Left Column: Visual Pie Chart */}
+          <div className="md:col-span-6 flex flex-col items-center justify-center rounded-2xl border bg-card/60 p-5 shadow-xs">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Budget Realization (Achieved vs Balance)
             </h4>
 
@@ -77,76 +77,89 @@ export function BudgetPieChartModal({
             />
 
             <p className="mt-3 text-[11px] text-muted-foreground italic text-center">
-              Cyan hatched slice represents <strong className="text-sky-600 dark:text-sky-400 font-semibold">Achieved</strong> spend/revenue; Red hatched slice represents the unspent <strong className="text-rose-600 dark:text-rose-400 font-semibold">Balance</strong>.
+              <span className="text-sky-600 dark:text-sky-400 font-semibold">Cyan: Achieved ({achievedPct}%)</span> • <span className="text-rose-600 dark:text-rose-400 font-semibold">Red: Balance ({balancePct}%)</span>
             </p>
           </div>
 
-          {/* Metric KPI Cards */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 w-full">
-            <div className="rounded-lg border bg-muted/30 p-3.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Planned Total</span>
-                <DollarSign className="size-4 text-muted-foreground" />
-              </div>
-              <div className="mt-2">
-                <p className="text-lg font-bold tracking-tight text-foreground">
-                  ${planned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {/* Right Column: Key Metrics & Breakdown */}
+          <div className="md:col-span-6 flex flex-col justify-between gap-3">
+            <div className="rounded-xl border bg-muted/30 p-3.5 flex items-center justify-between shadow-xs">
+              <div>
+                <span className="text-xs text-muted-foreground font-medium">Target Planned</span>
+                <p className="text-xl font-bold text-foreground tracking-tight">
+                  ₹{planned.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <span className="text-[11px] text-muted-foreground">Target Budget</span>
+              </div>
+              <div className="p-2 rounded-lg bg-background border">
+                <IndianRupee className="size-4 text-muted-foreground" />
               </div>
             </div>
 
-            <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-xs font-medium text-sky-600 dark:text-sky-400">
-                <span>Achieved</span>
+            <div className="rounded-xl border border-sky-500/25 bg-sky-500/5 p-3.5 flex items-center justify-between shadow-xs">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">Achieved Realization</span>
+                  <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold py-0.5">
+                    {achievedPct}%
+                  </Badge>
+                </div>
+                <p className="text-xl font-bold text-sky-600 dark:text-sky-400 tracking-tight mt-0.5">
+                  ₹{achieved.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
                 <TrendingUp className="size-4 text-sky-600 dark:text-sky-400" />
               </div>
-              <div className="mt-2">
-                <p className="text-lg font-bold tracking-tight text-sky-600 dark:text-sky-400">
-                  ${achieved.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <span className="text-[11px] font-semibold text-sky-600/80">
-                  {achievedPct}% Realized
-                </span>
-              </div>
             </div>
 
-            <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-3.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-xs font-medium text-rose-600 dark:text-rose-400">
-                <span>Balance</span>
+            <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-3.5 flex items-center justify-between shadow-xs">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Remaining Balance</span>
+                  <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold py-0.5">
+                    {balancePct}%
+                  </Badge>
+                </div>
+                <p className="text-xl font-bold text-rose-600 dark:text-rose-400 tracking-tight mt-0.5">
+                  ₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
                 <CheckCircle2 className="size-4 text-rose-600 dark:text-rose-400" />
               </div>
-              <div className="mt-2">
-                <p className="text-lg font-bold tracking-tight text-rose-600 dark:text-rose-400">
-                  ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <span className="text-[11px] font-semibold text-rose-600/80">
-                  {balancePct}% Remaining
+            </div>
+
+            {/* Department & Manager info */}
+            <div className="rounded-xl border bg-muted/20 p-3 text-xs flex flex-col gap-2 mt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                  <Tag className="size-3.5 text-muted-foreground" />
+                  Cost Center Account:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground truncate max-w-[160px]" title={budget.analyticAccount?.name}>
+                    {budget.analyticAccount?.name ?? "-"}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] uppercase font-mono py-0">
+                    {budget.analyticAccount?.type ?? "EXPENSE"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                  <User className="size-3.5 text-muted-foreground" />
+                  Responsible Manager:
+                </span>
+                <span className="font-semibold text-foreground truncate max-w-[180px]">
+                  {budget.responsiblePerson?.name ?? "-"}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Details footer */}
-          <div className="rounded-lg border bg-muted/20 p-4 w-full text-xs flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Tag className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Cost Center:</span>
-              <span className="font-semibold text-foreground">{budget.analyticAccount?.name ?? "-"}</span>
-              <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                {budget.analyticAccount?.type ?? "EXPENSE"}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Responsible:</span>
-              <span className="font-semibold text-foreground">{budget.responsiblePerson?.name ?? "-"}</span>
             </div>
           </div>
         </div>
 
         {onOpenFormView && (
-          <div className="mt-6 flex justify-end gap-2 border-t pt-4">
+          <div className="mt-5 flex justify-end gap-2.5 border-t pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>

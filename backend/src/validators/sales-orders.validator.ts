@@ -15,6 +15,8 @@ export const createSalesOrderSchema = z.object({
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 
 export const listSalesOrdersQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(["DRAFT", "CONFIRMED", "BILLED", "CANCELLED"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });

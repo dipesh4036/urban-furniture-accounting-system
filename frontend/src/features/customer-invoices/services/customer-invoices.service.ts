@@ -50,6 +50,7 @@ export interface CustomerInvoiceListResult {
 
 export interface ListCustomerInvoicesParams {
   status?: DocStatus;
+  search?: string;
   customerId?: string;
   page?: number;
   limit?: number;

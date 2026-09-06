@@ -28,6 +28,8 @@ export interface AccountListResult {
 
 export interface ListAccountsParams {
   type?: AccountType;
+  search?: string;
+  status?: "ACTIVE" | "ARCHIVED";
   page?: number;
   limit?: number;
 }

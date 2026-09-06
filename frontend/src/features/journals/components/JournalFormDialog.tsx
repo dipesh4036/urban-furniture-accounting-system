@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { getFirstErrorField } from "@/lib/formErrors";
 import { cn } from "@/lib/utils";
 import { useAccounts } from "@/features/accounts/hooks/useAccounts";
 import { useCreateJournal } from "../hooks/useJournals";
@@ -50,8 +51,12 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
     formState: { errors },
   } = useForm<JournalFormValues>({
     resolver: zodResolver(journalFormSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: { name: "", type: "" as JournalFormValues["type"], defaultAccountId: "" },
   });
+
+  const firstErrorField = getFirstErrorField(errors);
 
   async function onSubmit(values: JournalFormValues) {
     try {
@@ -93,10 +98,12 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
               <Input
                 id="name"
                 placeholder="e.g. Customer Invoices, Main Bank"
-                aria-invalid={!!errors.name}
+                aria-invalid={firstErrorField === "name"}
                 {...register("name")}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {firstErrorField === "name" && errors.name && (
+                <p className="text-xs text-destructive">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -109,7 +116,7 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
                 name="type"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={firstErrorField === "type"}>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -122,7 +129,9 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
                   </Select>
                 )}
               />
-              {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+              {firstErrorField === "type" && errors.type && (
+                <p className="text-xs text-destructive">{errors.type.message}</p>
+              )}
             </div>
           </div>
 
@@ -136,7 +145,7 @@ export function JournalFormDialog({ trigger }: JournalFormDialogProps) {
               name="defaultAccountId"
               render={({ field }) => <AccountCombobox value={field.value} onChange={field.onChange} />}
             />
-            {errors.defaultAccountId && (
+            {firstErrorField === "defaultAccountId" && errors.defaultAccountId && (
               <p className="text-xs text-destructive">{errors.defaultAccountId.message}</p>
             )}
           </div>
