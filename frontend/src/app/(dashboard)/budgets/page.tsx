@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, PieChart as PieChartIcon, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { PieChart as PieChartIcon, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -89,8 +88,6 @@ function getAchievedAmount(budget: Budget): number {
 }
 
 export default function BudgetsPage() {
-  const router = useRouter();
-
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedChartBudget, setSelectedChartBudget] = useState<Budget | null>(null);
   const [selectedFormBudget, setSelectedFormBudget] = useState<Budget | null>(null);
@@ -113,29 +110,13 @@ export default function BudgetsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Header & Breadcrumb */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            title="Back"
-            className="size-9 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">Budget Report</h1>
-              <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
-                {viewMode === "list" ? "List View" : "Kanban View"}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Planned vs actual expenditure tracking per analytic cost center.
-            </p>
-          </div>
+      {/* Top Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Budget Report</h1>
+          <p className="text-sm text-muted-foreground">
+            Planned vs actual expenditure tracking per analytic cost center.
+          </p>
         </div>
 
         {/* View Toggle switcher matching Odoo standard (List vs Kanban) */}

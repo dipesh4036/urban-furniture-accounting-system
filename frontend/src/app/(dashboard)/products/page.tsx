@@ -24,6 +24,7 @@ import { ProductDetailsDialog } from "@/features/products/components/ProductDeta
 import { useActivateProduct, useDeactivateProduct, useProducts } from "@/features/products/hooks/useProducts";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { toFileUrl } from "@/lib/api";
+import { cn } from "cn";
 import type { Product, ProductType } from "@/features/products/services/products.service";
 
 function formatPrice(value: string): string {
@@ -37,6 +38,8 @@ export default function ProductsPage() {
   const [view, setView] = useState<ViewMode>("list");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+  const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   const {
     searchInput,
@@ -90,6 +93,159 @@ export default function ProductsPage() {
       toast.error("Failed to activate product");
     }
   };
+
+  // Drag and Drop handlers for Kanban
+  function handleDragStart(e: React.DragEvent, id: string) {
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedProductId(id);
+  }
+
+  function handleDragEnd() {
+    setDraggedProductId(null);
+    setDragOverColumn(null);
+  }
+
+  function handleDragOver(e: React.DragEvent, columnId: string) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverColumn !== columnId) {
+      setDragOverColumn(columnId);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent, columnId: string) {
+    if (dragOverColumn === columnId) {
+      setDragOverColumn(null);
+    }
+  }
+
+  async function handleDrop(e: React.DragEvent, targetStatus: "ACTIVE" | "INACTIVE") {
+    e.preventDefault();
+    setDragOverColumn(null);
+    const id = e.dataTransfer.getData("text/plain") || draggedProductId;
+    if (!id) return;
+
+    const product = paginatedData.find((p) => p.id === id);
+    if (!product) return;
+
+    if (targetStatus === "ACTIVE" && !product.isActive) {
+      await handleActivate(id);
+    } else if (targetStatus === "INACTIVE" && product.isActive) {
+      await handleDeactivate(id);
+    }
+    setDraggedProductId(null);
+  }
+
+  // Kanban status groups
+  const activeProducts = paginatedData.filter((p) => p.isActive);
+  const inactiveProducts = paginatedData.filter((p) => !p.isActive);
+
+  function renderProductCard(product: Product) {
+    const isDragging = draggedProductId === product.id;
+
+    return (
+      <Card
+        key={product.id}
+        draggable
+        onDragStart={(e) => handleDragStart(e, product.id)}
+        onDragEnd={handleDragEnd}
+        onClick={() => setViewingProduct(product)}
+        className={cn(
+          "flex flex-col justify-between transition-all hover:shadow-md hover:border-primary/40 group bg-card cursor-grab active:cursor-grabbing",
+          isDragging && "opacity-40 ring-2 ring-primary/40 border-dashed"
+        )}
+      >
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2.5 p-3.5">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            {product.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={toFileUrl(product.image)}
+                alt={product.name}
+                className="size-10 rounded-lg object-cover border border-border/60 shrink-0"
+              />
+            ) : (
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Package className="size-5" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h3
+                className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors"
+                title={product.name}
+              >
+                {product.name}
+              </h3>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <StatusBadge status={product.type} showDot={false} size="sm" />
+                <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 truncate max-w-[120px]">
+                  {product.category}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <MoreVertical className="size-3.5" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => setViewingProduct(product)}>
+                  <Eye className="size-3.5 mr-2 text-muted-foreground" />
+                  <span>View Details</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEditingProduct(product)}>
+                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {product.isActive ? (
+                  <DropdownMenuItem
+                    onClick={() => handleDeactivate(product.id)}
+                    disabled={deactivateProduct.isPending}
+                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                  >
+                    <UserX className="size-3.5 mr-2" />
+                    <span>Deactivate</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => handleActivate(product.id)}
+                    disabled={activateProduct.isPending}
+                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
+                  >
+                    <UserCheck className="size-3.5 mr-2" />
+                    <span>Activate</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 p-3.5 pt-0 text-xs">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Sales Price:</span>
+            <span className="font-semibold text-foreground tabular-nums">₹{formatPrice(product.salesPrice)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Cost:</span>
+            <span className="text-muted-foreground tabular-nums">₹{formatPrice(product.costPrice)}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -324,105 +480,75 @@ export default function ProductsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {paginatedData.map((product) => (
-                      <Card
-                        key={product.id}
-                        onClick={() => setViewingProduct(product)}
-                        className="flex flex-col justify-between transition-all hover:shadow-md hover:border-primary/40 cursor-pointer group"
-                      >
-                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                          <div className="flex items-center gap-3 min-w-0 pr-2">
-                            {product.image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={toFileUrl(product.image)}
-                                alt={product.name}
-                                className="size-11 rounded-lg object-cover border border-border/60 shrink-0"
-                              />
-                            ) : (
-                              <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Package className="size-5" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <h3
-                                className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
-                                title={product.name}
-                              >
-                                {product.name}
-                              </h3>
-                              <div className="mt-1 flex flex-wrap gap-1.5">
-                                <StatusBadge status={product.type} showDot={false} size="sm" />
-                                <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 truncate max-w-[120px]">
-                                  {product.category}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                  {/* Kanban Status Board with Drag and Drop */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Column 1: Active */}
+                    <div
+                      onDragOver={(e) => handleDragOver(e, "ACTIVE")}
+                      onDragLeave={(e) => handleDragLeave(e, "ACTIVE")}
+                      onDrop={(e) => handleDrop(e, "ACTIVE")}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-xl border p-4 transition-all min-h-[420px]",
+                        dragOverColumn === "ACTIVE"
+                          ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 ring-2 ring-emerald-500/30"
+                          : "border-border/70 bg-muted/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-emerald-500" />
+                          <h3 className="font-semibold text-sm text-foreground">Active</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                            {activeProducts.length}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground font-medium">Drop to activate</span>
+                      </div>
 
-                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  >
-                                    <MoreVertical className="size-4" />
-                                    <span className="sr-only">Actions</span>
-                                  </Button>
-                                }
-                              />
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem onClick={() => setViewingProduct(product)}>
-                                  <Eye className="size-3.5 mr-2 text-muted-foreground" />
-                                  <span>View Details</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setEditingProduct(product)}>
-                                  <Pencil className="size-3.5 mr-2 text-muted-foreground" />
-                                  <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {product.isActive ? (
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeactivate(product.id)}
-                                    disabled={deactivateProduct.isPending}
-                                    className="text-destructive focus:text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
-                                  >
-                                    <UserX className="size-3.5 mr-2" />
-                                    <span>Deactivate</span>
-                                  </DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem
-                                    onClick={() => handleActivate(product.id)}
-                                    disabled={activateProduct.isPending}
-                                    className="text-emerald-600 focus:text-emerald-600 data-highlighted:bg-emerald-50 dark:data-highlighted:bg-emerald-950/40 data-highlighted:text-emerald-600"
-                                  >
-                                    <UserCheck className="size-3.5 mr-2" />
-                                    <span>Activate</span>
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                      <div className="flex flex-col gap-3 flex-1">
+                        {activeProducts.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center flex-1 rounded-lg border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+                            No active products
                           </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2 pb-4 text-sm">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Sales Price:</span>
-                            <span className="font-semibold text-foreground tabular-nums">₹{formatPrice(product.salesPrice)}</span>
+                        ) : (
+                          activeProducts.map((product) => renderProductCard(product))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 2: Inactive */}
+                    <div
+                      onDragOver={(e) => handleDragOver(e, "INACTIVE")}
+                      onDragLeave={(e) => handleDragLeave(e, "INACTIVE")}
+                      onDrop={(e) => handleDrop(e, "INACTIVE")}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-xl border p-4 transition-all min-h-[420px]",
+                        dragOverColumn === "INACTIVE"
+                          ? "border-rose-500 bg-rose-50/40 dark:bg-rose-950/20 ring-2 ring-rose-500/30"
+                          : "border-border/70 bg-muted/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-rose-500" />
+                          <h3 className="font-semibold text-sm text-foreground">Inactive</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60">
+                            {inactiveProducts.length}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground font-medium">Drop to deactivate</span>
+                      </div>
+
+                      <div className="flex flex-col gap-3 flex-1">
+                        {inactiveProducts.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center flex-1 rounded-lg border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+                            No inactive products
                           </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Cost:</span>
-                            <span className="text-muted-foreground tabular-nums">₹{formatPrice(product.costPrice)}</span>
-                          </div>
-                          <div className="pt-1">
-                            <StatusBadge status={product.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        ) : (
+                          inactiveProducts.map((product) => renderProductCard(product))
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <DataTablePagination
