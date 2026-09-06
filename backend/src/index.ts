@@ -37,22 +37,31 @@ app.use(
   express.static(path.join(process.cwd(), "uploads"))
 );
 
-// 5) Limit how many requests one IP can make, to slow down abuse
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per IP per window
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
-
-// 6) Simple route to check the server is alive
+// 5) Simple route to check the server is alive (before rate limiting so
+// health checks never get throttled)
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+// 6) Rate limiting. A generous limiter guards the whole API against abuse;
+// a much stricter one sits on /auth/* where brute-force attempts land.
+const apiLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const authLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.AUTH_RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
 // 7) All feature routes live under /api/v1
-app.use("/api/v1", apiRouter);
+app.use("/api/v1/auth", authLimiter);
+app.use("/api/v1", apiLimiter, apiRouter);
 
 // 8) No route matched above - send a clean 404
 app.use(notFoundMiddleware);
