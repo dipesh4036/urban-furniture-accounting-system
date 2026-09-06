@@ -200,15 +200,26 @@ export async function generateInvoiceFromSalesOrder(
     });
   });
 
+  // Fire-and-forget: don't block the response on the mail server, but do
+  // record when the email actually went out so the invoices list can show
+  // "Email Sent: Yes" (CustomerInvoice.emailSentAt).
   sendInvoiceEmail({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
     totalAmount: invoice.totalAmount.toString(),
     customerEmail: invoice.customer.email,
     customerName: invoice.customer.name,
-  }).catch((error) => {
-    console.error(`Failed to send invoice email for invoice ${invoiceNumber}:`, error);
-  });
+  })
+    .then(async (sent) => {
+      if (!sent) return;
+      await prisma.customerInvoice.update({
+        where: { id: invoice.id },
+        data: { emailSentAt: new Date() },
+      });
+    })
+    .catch((error) => {
+      console.error(`Failed to send invoice email for invoice ${invoiceNumber}:`, error);
+    });
 
   return invoice;
 }
