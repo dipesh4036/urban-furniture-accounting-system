@@ -326,7 +326,11 @@ export default function ProductsPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {paginatedData.map((product) => (
-                      <Card key={product.id} className="flex flex-col justify-between transition-all hover:shadow-md">
+                      <Card
+                        key={product.id}
+                        onClick={() => setViewingProduct(product)}
+                        className="flex flex-col justify-between transition-all hover:shadow-md hover:border-primary/40 cursor-pointer group"
+                      >
                         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                           <div className="flex items-center gap-3 min-w-0 pr-2">
                             {product.image ? (
@@ -342,7 +346,10 @@ export default function ProductsPage() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <h3 className="font-semibold text-foreground truncate" title={product.name}>
+                              <h3
+                                className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
+                                title={product.name}
+                              >
                                 {product.name}
                               </h3>
                               <div className="mt-1 flex flex-wrap gap-1.5">
@@ -354,18 +361,7 @@ export default function ProductsPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-                              onClick={() => setViewingProduct(product)}
-                              title="View Details"
-                            >
-                              <Eye className="size-4" />
-                              <span className="sr-only">View Details</span>
-                            </Button>
-
+                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 render={

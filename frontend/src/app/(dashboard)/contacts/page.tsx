@@ -353,7 +353,11 @@ export default function ContactsPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {paginatedData.map((contact) => (
-                      <Card key={contact.id} className="flex flex-col justify-between transition-all hover:shadow-md">
+                      <Card
+                        key={contact.id}
+                        onClick={() => setViewingContact(contact)}
+                        className="flex flex-col justify-between transition-all hover:shadow-md hover:border-primary/40 cursor-pointer group"
+                      >
                         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                           <div className="flex items-center gap-3 min-w-0 pr-2">
                             {contact.profileImage ? (
@@ -369,32 +373,24 @@ export default function ContactsPage() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <h3 className="font-semibold text-foreground truncate" title={contact.name}>
+                              <h3
+                                className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
+                                title={contact.name}
+                              >
                                 {contact.name}
                               </h3>
                               <StatusBadge status={contact.type} showDot={false} size="sm" className="mt-1" />
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-                              onClick={() => setViewingContact(contact)}
-                              title="View Details"
-                            >
-                              <Eye className="size-4" />
-                              <span className="sr-only">View Details</span>
-                            </Button>
-
+                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 render={
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"
-                                    className="size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                                   >
                                     <MoreVertical className="size-4" />
                                     <span className="sr-only">Actions</span>
