@@ -14,6 +14,7 @@ import { DataTableEmptyState } from "@/components/common/DataTableEmptyState";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { UserFormDialog } from "@/features/users/components/UserFormDialog";
+import { EditUserDialog } from "@/features/users/components/EditUserDialog";
 import { useUpdateUser, useUsers } from "@/features/users/hooks/useUsers";
 import type { StaffRole } from "@/features/users/services/users.service";
 
@@ -196,14 +197,18 @@ export default function UsersPage() {
                       <StatusBadge status={u.isActive ? "ACTIVE" : "INACTIVE"} size="sm" />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleActive(u.id, u.isActive)}
-                        disabled={updateUser.isPending}
-                      >
-                        {u.isActive ? "Deactivate" : "Reactivate"}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <EditUserDialog user={u} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => handleToggleActive(u.id, u.isActive)}
+                          disabled={updateUser.isPending}
+                        >
+                          {u.isActive ? "Deactivate" : "Reactivate"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

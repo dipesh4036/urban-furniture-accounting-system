@@ -105,14 +105,32 @@ export async function getStaffUserById(id: string) {
   return user;
 }
 
-// Covers both "change someone's role" and "deactivate/reactivate" - both
-// are just a PATCH with whichever field changed. Never touches
-// passwordHash; there's no password-change path through this endpoint.
+// Covers editing user name, email, role, status, and optional password reset.
 export async function updateStaffUser(id: string, input: UpdateUserInput) {
-  const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } });
-  if (!exists) {
+  const existing = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true } });
+  if (!existing) {
     throw new AppError(404, "User not found", "USER_NOT_FOUND");
   }
 
-  return prisma.user.update({ where: { id }, data: input, select: safeUserSelect });
+  if (input.email && input.email !== existing.email) {
+    const emailTaken = await prisma.user.findUnique({ where: { email: input.email }, select: { id: true } });
+    if (emailTaken && emailTaken.id !== id) {
+      throw new AppError(409, "This email is already registered", "EMAIL_TAKEN");
+    }
+  }
+
+  const { password, confirmPassword, ...rest } = input;
+  let passwordHash: string | undefined;
+  if (password && password.trim().length > 0) {
+    passwordHash = await hashPassword(password);
+  }
+
+  return prisma.user.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(passwordHash ? { passwordHash } : {}),
+    },
+    select: safeUserSelect,
+  });
 }

@@ -26,3 +26,39 @@ export const createUserFormSchema = z
   });
 
 export type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
+ 
+export const updateUserFormSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Enter a valid email address"),
+    role: z.enum(staffRoles, { message: "Select a role" }),
+    isActive: z.boolean(),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .refine(
+    (values) => {
+      if (values.password && values.password.length > 0) {
+        return values.password.length >= 8;
+      }
+      return true;
+    },
+    {
+      message: "Password must be at least 8 characters",
+      path: ["password"],
+    }
+  )
+  .refine(
+    (values) => {
+      if (values.password && values.password.length > 0) {
+        return values.password === values.confirmPassword;
+      }
+      return true;
+    },
+    {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    }
+  );
+
+export type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>;

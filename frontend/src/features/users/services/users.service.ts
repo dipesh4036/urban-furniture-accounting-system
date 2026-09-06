@@ -47,8 +47,11 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   name?: string;
+  email?: string;
   role?: StaffRole;
   isActive?: boolean;
+  password?: string;
+  confirmPassword?: string;
 }
 
 // Calls GET /users.

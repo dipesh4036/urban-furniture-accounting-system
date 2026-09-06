@@ -28,11 +28,27 @@ export const createUserSchema = z
   });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
-export const updateUserSchema = z.object({
-  name: z.string().min(1, "Name is required").optional(),
-  role: staffRoleSchema.optional(),
-  isActive: z.boolean().optional(),
-});
+export const updateUserSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").optional(),
+    email: z.string().email("Enter a valid email address").optional(),
+    role: staffRoleSchema.optional(),
+    isActive: z.boolean().optional(),
+    password: passwordComplexity.optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .refine(
+    (values) => {
+      if (values.password && values.password.length > 0) {
+        return values.password === values.confirmPassword;
+      }
+      return true;
+    },
+    {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    }
+  );
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 // For GET /users?page=&limit= - query params always arrive as strings,
